@@ -1,0 +1,38 @@
+# ============================================
+# MARKETING CRM - HOSTINGER PRODUCTION
+# ============================================
+# Copy this file to .env.local and update values
+# for local development, use .env.local
+# for production, use values from Hostinger
+
+# ============================================
+# AUTHENTICATION (Required)
+# ============================================
+# Generate with: openssl rand -base64 32
+AUTH_SECRET=YOUR_AUTH_SECRET_HERE
+
+# Your production URL (no trailing slash)
+NEXT_PUBLIC_BETTER_AUTH_URL=https://yourdomain.com
+
+# ============================================
+# DATABASE (SQLite - default for this app)
+# ============================================
+# SQLite is file-based. For production on Hostinger VPS,
+# the database file will be stored in the app directory.
+# For PostgreSQL, uncomment and update below:
+# DATABASE_URL=postgresql://user:password@host:5432/database
+
+# ============================================
+# SMTP EMAIL (Optional - for sending emails)
+# ============================================
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM="Marketing CRM" <noreply@yourdomain.com>
+
+# ============================================
+# ADDITIONAL CONFIGURATION
+# ============================================
+# Node environment
+NODE_ENV=production

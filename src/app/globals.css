@@ -1,0 +1,338 @@
+@import "tailwindcss";
+
+:root {
+  /* Nandi Creative Agency inspired palette */
+  --background: #FDFBF7;
+  --foreground: #2D2A26;
+  --primary: #E07A5F;
+  --primary-hover: #C96A52;
+  --secondary: #3D405B;
+  --accent: #F2CC8F;
+  --muted: #9B9B8F;
+  --surface: #FFFFFF;
+  --border: #E8E4DD;
+  --success: #81B29A;
+  --warning: #F2CC8F;
+  --error: #E07A5F;
+  
+  /* Card backgrounds */
+  --card-bg: #FFFFFF;
+  --card-hover: #FDFBF7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #2D2A26;
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--secondary);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: 2px solid var(--secondary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  background: var(--secondary);
+  color: white;
+}
+
+/* Card styles */
+.card {
+  background: var(--card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(45, 42, 38, 0.06);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(45, 42, 38, 0.1);
+}
+
+/* Input styles */
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--foreground);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.15);
+}
+
+input::placeholder {
+  color: var(--muted);
+}
+
+/* Label styles */
+label {
+  display: block;
+  font-weight: 500;
+  color: var(--secondary);
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-active {
+  background: rgba(129, 178, 154, 0.15);
+  color: #5A9A76;
+}
+
+.badge-pending {
+  background: rgba(242, 204, 143, 0.2);
+  color: #B8923D;
+}
+
+.badge-new {
+  background: rgba(224, 122, 95, 0.15);
+  color: var(--primary);
+}
+
+.badge-completed {
+  background: rgba(129, 178, 154, 0.15);
+  color: #5A9A76;
+}
+
+.badge-sent {
+  background: rgba(61, 64, 91, 0.15);
+  color: var(--secondary);
+}
+
+.badge-overdue {
+  background: rgba(224, 122, 95, 0.15);
+  color: var(--primary);
+}
+
+.badge-paid {
+  background: rgba(129, 178, 154, 0.15);
+  color: #5A9A76;
+}
+
+.badge-draft {
+  background: rgba(155, 155, 143, 0.15);
+  color: var(--muted);
+}
+
+/* Link styles */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 1rem;
+  background: var(--background);
+  color: var(--secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border);
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+tr:hover td {
+  background: var(--card-hover);
+}
+
+/* Page transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Stat cards */
+.stat-card {
+  background: var(--card-bg);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(45, 42, 38, 0.06);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(45, 42, 38, 0.1);
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+  background: rgba(224, 122, 95, 0.1);
+  color: var(--primary);
+}
+
+/* Hero section */
+.hero {
+  background: linear-gradient(135deg, var(--secondary) 0%, #4A4D6A 100%);
+  color: white;
+  padding: 4rem 2rem;
+  border-radius: 1.5rem;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2rem 0;
+}
+
+/* Sign out button */
+.sign-out-btn {
+  background: transparent;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+
+.sign-out-btn:hover {
+  color: var(--primary);
+}
+
+/* Navigation link */
+.nav-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background: rgba(224, 122, 95, 0.1);
+  color: var(--primary);
+}
