@@ -6,12 +6,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Hostinger deployment settings
   // Output standalone for VPS/container deployments
   output: 'standalone',
   
-  // Trust proxy headers (for load balancers/proxies)
-  trustXForwardedHeaders: true,
+  // For Hostinger - experimental support
+  experimental: {
+    // Trust proxy headers (for load balancers/proxies)
+  },
 };
 
 export default nextConfig;
