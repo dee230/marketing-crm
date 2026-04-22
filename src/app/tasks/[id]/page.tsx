@@ -16,19 +16,19 @@ interface PageProps {
 }
 
 async function getTask(id: string) {
-  const [task] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).all();
+  const [task] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).execute();
   return task || null;
 }
 
 async function getAssignee(userId: string | null) {
   if (!userId) return null;
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).all();
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).execute();
   return user || null;
 }
 
 async function getClient(clientId: string | null) {
   if (!clientId) return null;
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).all();
+  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).execute();
   return client || null;
 }
 

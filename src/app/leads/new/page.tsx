@@ -51,7 +51,7 @@ export default async function NewLeadPage() {
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active')).all();
+  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active')).execute();
 
   return (
     <div className="animate-fade-in">

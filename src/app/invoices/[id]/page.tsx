@@ -19,10 +19,10 @@ interface PageProps {
 }
 
 async function getInvoice(id: string) {
-  const [invoice] = await db.select().from(schema.invoices).where(eq(schema.invoices.id, id)).all();
+  const [invoice] = await db.select().from(schema.invoices).where(eq(schema.invoices.id, id)).execute();
   if (!invoice) return null;
   
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, invoice.clientId)).all();
+  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, invoice.clientId)).execute();
   
   return { ...invoice, client };
 }

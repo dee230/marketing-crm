@@ -23,10 +23,10 @@ export async function GET(request: Request) {
       )
     )
     .orderBy(desc(schema.invoices.dueDate))
-    .all();
+    .execute();
 
   // Get all clients
-  const allClients = await db.select().from(schema.clients).all();
+  const allClients = await db.select().from(schema.clients).execute();
   const clientMap = new Map(allClients.map(c => [c.id, c]));
 
   // Enrich invoices with client data

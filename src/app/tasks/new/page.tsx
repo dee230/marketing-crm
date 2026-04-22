@@ -51,8 +51,8 @@ export default async function NewTaskPage() {
   if (!userRole) redirect('/sign-in');
 
   const [users, clients] = await Promise.all([
-    db.select().from(schema.users).all(),
-    db.select().from(schema.clients).all(),
+    db.select().from(schema.users).execute(),
+    db.select().from(schema.clients).execute(),
   ]);
 
   return (

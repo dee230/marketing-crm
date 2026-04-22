@@ -29,15 +29,15 @@ function getPeopleAtCompany(companyName: string) {
       eq(schema.clients.company, companyName),
       sql`${schema.clients.company} IS NULL AND ${schema.clients.name} = ${companyName}`
     )
-  ).all();
+  ).execute();
 }
 
 function getPersonInvoices(personId: string) {
-  return db.select().from(schema.invoices).where(eq(schema.invoices.clientId, personId)).all();
+  return db.select().from(schema.invoices).where(eq(schema.invoices.clientId, personId)).execute();
 }
 
 function getPersonTasks(personId: string) {
-  return db.select().from(schema.tasks).where(eq(schema.tasks.clientId, personId)).all();
+  return db.select().from(schema.tasks).where(eq(schema.tasks.clientId, personId)).execute();
 }
 
 export default async function CompanyDetailPage({ params }: PageProps) {

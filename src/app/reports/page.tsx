@@ -19,10 +19,10 @@ export default async function ReportsPage() {
   const canViewInvoices = isAdmin;
 
   // Get all invoices with client data
-  const allInvoices = await db.select().from(schema.invoices).all();
-  const allClients = await db.select().from(schema.clients).all();
-  const allLeads = await db.select().from(schema.leads).all();
-  const allTasks = await db.select().from(schema.tasks).all();
+  const allInvoices = await db.select().from(schema.invoices).execute();
+  const allClients = await db.select().from(schema.clients).execute();
+  const allLeads = await db.select().from(schema.leads).execute();
+  const allTasks = await db.select().from(schema.tasks).execute();
 
   const clientMap = new Map(allClients.map(c => [c.id, c]));
 

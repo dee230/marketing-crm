@@ -38,14 +38,14 @@ async function getAuditLogs(searchParams: SearchParams) {
     query = query.where(or(...filters)) as typeof query;
   }
   
-  const logs = await query.orderBy(desc(schema.auditLogs.createdAt)).limit(100).all();
+  const logs = await query.orderBy(desc(schema.auditLogs.createdAt)).limit(100).execute();
   
   // Get user details for all user IDs in logs
   const userIds = [...new Set(logs.map(l => l.userId).filter(Boolean))] as string[];
   let userMap = new Map();
   
   if (userIds.length > 0) {
-    const users = await db.select().from(schema.users).all();
+    const users = await db.select().from(schema.users).execute();
     userMap = new Map(users.map(u => [u.id, u]));
   }
   

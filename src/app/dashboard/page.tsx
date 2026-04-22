@@ -13,15 +13,15 @@ import { ActivityFeed } from './activity-feed';
 export const dynamic = 'force-dynamic';
 
 async function getStats() {
-  const allClients = await db.select().from(schema.clients).all();
-  const allLeads = await db.select().from(schema.leads).all();
-  const allInvoices = await db.select().from(schema.invoices).all();
-  const allTasksFull = await db.select().from(schema.tasks).all();
-  const pendingTasksList = await db.select().from(schema.tasks).where(eq(schema.tasks.status, 'pending')).orderBy(schema.tasks.dueDate).limit(5).all();
+  const allClients = await db.select().from(schema.clients).execute();
+  const allLeads = await db.select().from(schema.leads).execute();
+  const allInvoices = await db.select().from(schema.invoices).execute();
+  const allTasksFull = await db.select().from(schema.tasks).execute();
+  const pendingTasksList = await db.select().from(schema.tasks).where(eq(schema.tasks.status, 'pending')).orderBy(schema.tasks.dueDate).limit(5).execute();
 
-  const recentLeads = await db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt)).limit(5).all();
-  const recentInvoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).limit(5).all();
-  const recentTasks = await db.select().from(schema.tasks).orderBy(desc(schema.tasks.createdAt)).limit(5).all();
+  const recentLeads = await db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt)).limit(5).execute();
+  const recentInvoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).limit(5).execute();
+  const recentTasks = await db.select().from(schema.tasks).orderBy(desc(schema.tasks.createdAt)).limit(5).execute();
   
   // Get client names for tasks
   const clientMap = new Map(allClients.map(c => [c.id, c]));

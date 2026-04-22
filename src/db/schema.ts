@@ -1,34 +1,34 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, real, timestamp, pgSchema } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // =====================
 // AUTH SCHEMA (Better Auth)
 // =====================
 
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  emailVerified: integer('email_verified').notNull().default(0),
   image: text('image'),
-  role: text('role', { enum: ['super_admin', 'admin', 'member'] }).notNull().default('member'),
+  role: text('role').notNull().default('member'),
   password: text('password'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
-export const sessions = sqliteTable('sessions', {
+export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
   token: text('token').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 });
 
-export const accounts = sqliteTable('accounts', {
+export const accounts = pgTable('accounts', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
@@ -36,34 +36,34 @@ export const accounts = sqliteTable('accounts', {
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
-  refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { mode: 'date' }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { mode: 'date' }),
   scope: text('scope'),
   password: text('password'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
-export const verifications = sqliteTable('verifications', {
+export const verifications = pgTable('verifications', {
   id: text('id').primaryKey(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }),
+  updatedAt: timestamp('updated_at', { mode: 'date' }),
 });
 
 // Password reset requests table
-export const passwordResetRequests = sqliteTable('password_reset_requests', {
+export const passwordResetRequests = pgTable('password_reset_requests', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
-  status: text('status', { enum: ['pending', 'approved', 'rejected', 'used'] }).notNull().default('pending'),
-  requestedAt: integer('requested_at', { mode: 'timestamp' }).notNull(),
-  approvedAt: integer('approved_at', { mode: 'timestamp' }),
+  status: text('status').notNull().default('pending'),
+  requestedAt: timestamp('requested_at', { mode: 'date' }).notNull(),
+  approvedAt: timestamp('approved_at', { mode: 'date' }),
   approvedBy: text('approved_by').references(() => users.id, { onDelete: 'set null' }),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  usedAt: integer('used_at', { mode: 'timestamp' }),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  usedAt: timestamp('used_at', { mode: 'date' }),
 });
 
 // =====================
@@ -71,72 +71,72 @@ export const passwordResetRequests = sqliteTable('password_reset_requests', {
 // =====================
 
 // Clients table
-export const clients = sqliteTable('clients', {
+export const clients = pgTable('clients', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   company: text('company'),
   email: text('email'),
   phone: text('phone'),
-  status: text('status', { enum: ['active', 'inactive', 'prospect'] }).notNull().default('prospect'),
+  status: text('status').notNull().default('prospect'),
   notes: text('notes'),
   website: text('website'),
   linkedin: text('linkedin'),
   twitter: text('twitter'),
   instagram: text('instagram'),
-  otherLinks: text('other_links'), // JSON array for additional links
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  otherLinks: text('other_links'),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
 // Leads table
-export const leads = sqliteTable('leads', {
+export const leads = pgTable('leads', {
   id: text('id').primaryKey(),
   clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   email: text('email'),
   phone: text('phone'),
   company: text('company'),
-  source: text('source', { enum: ['linkedin', 'website', 'referral', 'cold-call', 'other'] }).notNull().default('other'),
-  status: text('status', { enum: ['new', 'contacted', 'qualified', 'converted', 'lost'] }).notNull().default('new'),
+  source: text('source').notNull().default('other'),
+  status: text('status').notNull().default('new'),
   notes: text('notes'),
   linkedinProfileId: text('linkedin_profile_id'),
-  linkedinData: text('linkedin_data'), // JSON string for LinkedIn extra data
-  convertedAt: integer('converted_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  linkedinData: text('linkedin_data'),
+  convertedAt: timestamp('converted_at', { mode: 'date' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
 // Invoices table
-export const invoices = sqliteTable('invoices', {
+export const invoices = pgTable('invoices', {
   id: text('id').primaryKey(),
   invoiceNumber: text('invoice_number').notNull().unique(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
   amount: real('amount').notNull(),
-  status: text('status', { enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'] }).notNull().default('draft'),
-  dueDate: integer('due_date', { mode: 'timestamp' }).notNull(),
-  paidDate: integer('paid_date', { mode: 'timestamp' }),
-  paymentReference: text('payment_reference'), // M-Pesa ID, receipt number, etc.
+  status: text('status').notNull().default('draft'),
+  dueDate: timestamp('due_date', { mode: 'date' }).notNull(),
+  paidDate: timestamp('paid_date', { mode: 'date' }),
+  paymentReference: text('payment_reference'),
   description: text('description'),
-  items: text('items'), // JSON string for line items
+  items: text('items'),
   notes: text('notes'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
 // Tasks table
-export const tasks = sqliteTable('tasks', {
+export const tasks = pgTable('tasks', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description'),
   assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
   clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
-  status: text('status', { enum: ['pending', 'in-progress', 'completed', 'cancelled'] }).notNull().default('pending'),
-  priority: text('priority', { enum: ['low', 'medium', 'high', 'urgent'] }).notNull().default('medium'),
-  dueDate: integer('due_date', { mode: 'timestamp' }),
-  completedAt: integer('completed_at', { mode: 'timestamp' }),
-  statusLockedAt: integer('status_locked_at', { mode: 'timestamp' }), // When status was first changed - only admins can edit after this
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  status: text('status').notNull().default('pending'),
+  priority: text('priority').notNull().default('medium'),
+  dueDate: timestamp('due_date', { mode: 'date' }),
+  completedAt: timestamp('completed_at', { mode: 'date' }),
+  statusLockedAt: timestamp('status_locked_at', { mode: 'date' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
 // =====================
@@ -195,16 +195,16 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
 }));
 
 // Audit log table
-export const auditLogs = sqliteTable('audit_logs', {
+export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
   userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   action: text('action').notNull(),
   entityType: text('entity_type').notNull(),
   entityId: text('entity_id').notNull(),
-  details: text('details'), // JSON string for additional context
+  details: text('details'),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
 });
 
 export const passwordResetRequestsRelations = relations(passwordResetRequests, ({ one }) => ({

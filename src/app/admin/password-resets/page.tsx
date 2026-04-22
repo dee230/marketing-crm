@@ -20,13 +20,13 @@ async function getPendingRequests() {
       eq(schema.passwordResetRequests.status, 'approved')
     ))
     .orderBy(desc(schema.passwordResetRequests.requestedAt))
-    .all();
+    .execute();
 
   // Get user details
   const userIds = [...new Set(requests.map(r => r.userId))];
   const users = await db.select()
     .from(schema.users)
-    .all();
+    .execute();
 
   const userMap = new Map(users.map(u => [u.id, u]));
 

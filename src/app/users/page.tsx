@@ -13,7 +13,7 @@ import { DeleteUserButton } from './delete-button';
 export const dynamic = 'force-dynamic';
 
 async function getUsers() {
-  return db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).all();
+  return db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).execute();
 }
 
 export default async function UsersPage() {

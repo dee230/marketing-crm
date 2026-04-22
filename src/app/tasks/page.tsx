@@ -38,7 +38,7 @@ async function getTasks(page: number, search?: string) {
     .orderBy(schema.tasks.dueDate)
     .limit(ITEMS_PER_PAGE)
     .offset(offset)
-    .all();
+    .execute();
     
   // Get total count for pagination
   const totalCount = await db.select({ count: sql<number>`count(*)` })
@@ -47,8 +47,8 @@ async function getTasks(page: number, search?: string) {
     .then(rows => rows[0]?.count || 0);
   
   const [users, clients] = await Promise.all([
-    db.select().from(schema.users).all(),
-    db.select().from(schema.clients).all(),
+    db.select().from(schema.users).execute(),
+    db.select().from(schema.clients).execute(),
   ]);
   
   const userMap = new Map(users.map(u => [u.id, u.name]));

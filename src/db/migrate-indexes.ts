@@ -50,7 +50,7 @@ console.log('✅ Database indexes created successfully!');
 const indexes = sqlite.prepare(`
   SELECT name FROM sqlite_master 
   WHERE type='index' AND tbl_name IN ('leads', 'tasks', 'clients', 'invoices', 'users')
-`).all();
+`).execute();
 
 console.log('\nIndexes created:');
 indexes.forEach((idx: any) => console.log(`  - ${idx.name}`));

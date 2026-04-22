@@ -43,7 +43,7 @@ async function getLeads(page: number, search?: string) {
     .orderBy(desc(schema.leads.createdAt))
     .limit(ITEMS_PER_PAGE)
     .offset(offset)
-    .all();
+    .execute();
     
   // Get total count for pagination
   const totalCount = await db.select({ count: sql<number>`count(*)` })
@@ -51,7 +51,7 @@ async function getLeads(page: number, search?: string) {
     .where(whereClause)
     .then(rows => rows[0]?.count || 0);
   
-  const clients = await db.select().from(schema.clients).all();
+  const clients = await db.select().from(schema.clients).execute();
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
   
   return {
@@ -64,8 +64,8 @@ async function getLeads(page: number, search?: string) {
 }
 
 async function getAllLeadsForChart() {
-  const leads = await db.select().from(schema.leads).all();
-  const clients = await db.select().from(schema.clients).all();
+  const leads = await db.select().from(schema.leads).execute();
+  const clients = await db.select().from(schema.clients).execute();
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
   
   return leads.map(lead => ({

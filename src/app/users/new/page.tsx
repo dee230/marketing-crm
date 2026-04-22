@@ -33,7 +33,7 @@ async function createUser(formData: FormData) {
   const existingUser = await db.select()
     .from(schema.users)
     .where(eq(schema.users.email, email))
-    .all();
+    .execute();
 
   if (existingUser.length > 0) {
     redirect('/users/new');

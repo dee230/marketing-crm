@@ -14,7 +14,7 @@ import { InvoiceCalendar } from './invoice-calendar';
 export const dynamic = 'force-dynamic';
 
 async function markOverdueInvoices() {
-  const allInvoices = await db.select().from(schema.invoices).all();
+  const allInvoices = await db.select().from(schema.invoices).execute();
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
   
@@ -37,8 +37,8 @@ async function getInvoices() {
   // Auto-mark overdue invoices
   await markOverdueInvoices();
   
-  const invoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).all();
-  const clients = await db.select().from(schema.clients).all();
+  const invoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).execute();
+  const clients = await db.select().from(schema.clients).execute();
   const clientMap = new Map(clients.map(c => [c.id, c]));
   
   return invoices.map(invoice => ({

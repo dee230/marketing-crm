@@ -16,13 +16,13 @@ interface PageProps {
 }
 
 async function getLead(id: string) {
-  const [lead] = await db.select().from(schema.leads).where(eq(schema.leads.id, id)).all();
+  const [lead] = await db.select().from(schema.leads).where(eq(schema.leads.id, id)).execute();
   return lead || null;
 }
 
 async function getClient(clientId: string | null) {
   if (!clientId) return null;
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).all();
+  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).execute();
   return client || null;
 }
 

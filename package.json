@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p $PORT",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "seed": "tsx seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.2",
     "better-sqlite3": "^12.8.0",
     "drizzle-kit": "^0.31.10",

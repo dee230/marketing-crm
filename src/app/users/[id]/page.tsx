@@ -17,7 +17,7 @@ interface PageProps {
 }
 
 async function getUser(id: string) {
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id)).all();
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id)).execute();
   return user || null;
 }
 
@@ -39,7 +39,7 @@ async function updateUser(id: string, formData: FormData) {
   const existingUser = await db.select()
     .from(schema.users)
     .where(eq(schema.users.email, email))
-    .all();
+    .execute();
 
   if (existingUser.length > 0 && existingUser[0].id !== id) {
     redirect('/users');

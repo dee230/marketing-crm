@@ -36,7 +36,7 @@ async function getCompanies(page: number, search?: string) {
     .orderBy(desc(schema.clients.createdAt))
     .limit(ITEMS_PER_PAGE)
     .offset(offset)
-    .all();
+    .execute();
     
   // Get total count for pagination
   const totalCount = await db.select({ count: sql<number>`count(*)` })
@@ -72,7 +72,7 @@ async function getCompanies(page: number, search?: string) {
 async function getPeopleAtCompany(companyName: string) {
   return db.select().from(schema.clients).where(
     sql`${schema.clients.company} = ${companyName} OR (${schema.clients.company} IS NULL AND ${schema.clients.name} = ${companyName})`
-  ).all();
+  ).execute();
 }
 
 export default async function CompaniesPage({ searchParams }: PageProps) {
