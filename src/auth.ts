@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { db } from '@/db';
 import * as schema from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logAudit } from './lib/audit-log';
 
 export const authConfig: NextAuthOptions = {
   providers: [
@@ -55,6 +56,31 @@ export const authConfig: NextAuthOptions = {
         (session.user as any).role = token.role;
       }
       return session;
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      // Log successful sign in
+      if (user?.id) {
+        await logAudit({
+          userId: user.id as string,
+          action: 'user_signed_in',
+          entityType: 'user',
+          entityId: user.id as string,
+          details: { email: user.email },
+        });
+      }
+    },
+    async signOut({ session }) {
+      // Log sign out - user is in session
+      if (session?.user?.id) {
+        await logAudit({
+          userId: session.user.id as string,
+          action: 'user_signed_out',
+          entityType: 'user',
+          entityId: session.user.id as string,
+        });
+      }
     },
   },
   pages: {
