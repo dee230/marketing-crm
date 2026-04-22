@@ -45,7 +45,7 @@ async function createUser(formData: FormData) {
     email,
     password: password || null,
     role: finalRole as 'super_admin' | 'admin' | 'member',
-    emailVerified: false,
+    emailVerified: 0, // 0 = false for Postgres integer type
     createdAt: new Date(),
     updatedAt: new Date(),
   });
