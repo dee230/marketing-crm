@@ -8,9 +8,10 @@ import { SidebarNav } from '@/components/sidebar-nav';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
-import { canViewInvoices } from '@/lib/roles';
+import { canViewInvoices, canManageInvoices } from '@/lib/roles';
 import type { InvoiceData } from '@/lib/invoice-pdf';
 import { DownloadPDFButton } from './download-button';
+import { StatusUpdateForm } from './status-update-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,31 @@ async function getInvoice(id: string) {
   return { ...invoice, client };
 }
 
+async function updateInvoiceStatus(invoiceId: string, status: string, paidDate: string | null, paymentReference: string | null, userId: string) {
+  'use server';
+  
+  const session = await getServerSession(authConfig);
+  if (!session) redirect('/sign-in');
+  
+  const userRole = (session.user as any)?.role;
+  if (!canManageInvoices(userRole)) {
+    throw new Error('Not authorized');
+  }
+
+  const updates: any = { status, updatedAt: new Date() };
+  
+  // If marking as paid, set paidDate
+  if (status === 'paid' && paidDate) {
+    updates.paidDate = new Date(paidDate);
+    updates.paymentReference = paymentReference;
+  } else if (status !== 'paid') {
+    updates.paidDate = null;
+    updates.paymentReference = null;
+  }
+
+  await db.update(schema.invoices).set(updates).where(eq(schema.invoices.id, invoiceId)).execute();
+}
+
 export default async function InvoiceDetailPage({ params }: PageProps) {
   const { id } = await params;
   const session = await getServerSession(authConfig);
@@ -35,9 +61,11 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   const invoice = await getInvoice(id);
   if (!invoice) notFound();
 
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
   if (!canViewInvoices(userRole)) redirect('/dashboard');
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const canManage = canManageInvoices(userRole);
 
   const invoiceData: InvoiceData = {
     invoiceNumber: invoice.invoiceNumber,
@@ -105,12 +133,6 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
                 <h3 className="text-sm font-medium mb-4" style={{ color: '#9B9B8F' }}>Invoice Details</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm" style={{ color: '#9B9B8F' }}>Status</span>
-                    <span className={`badge ${invoice.status === 'paid' ? 'badge-completed' : invoice.status === 'sent' ? 'badge-sent' : invoice.status === 'overdue' ? 'bg-red-100 text-red-700' : 'badge-pending'}`}>
-                      {invoice.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-sm" style={{ color: '#9B9B8F' }}>Issue Date</span>
                     <span className="text-sm" style={{ color: '#2D2A26' }}>{invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : '-'}</span>
                   </div>
@@ -131,6 +153,15 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="card p-6">
+                <h3 className="text-sm font-medium mb-4" style={{ color: '#9B9B8F' }}>Status</h3>
+                <StatusUpdateForm 
+                  invoiceId={invoice.id} 
+                  currentStatus={invoice.status} 
+                  canManage={canManage} 
+                />
               </div>
 
               <div className="card p-6">
