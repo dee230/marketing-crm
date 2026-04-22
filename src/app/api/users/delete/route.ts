@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
-    await db.delete(schema.users).where(eq(schema.users.id, userId)).run();
+    await db.delete(schema.users).where(eq(schema.users.id, userId)).execute();
     
     // Log the action
     await logAudit({

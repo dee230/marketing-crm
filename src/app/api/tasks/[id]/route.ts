@@ -55,7 +55,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
   }
   
-  await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).run();
+  await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
   
   return NextResponse.json({ success: true });
 }
@@ -72,7 +72,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Only admins can delete tasks' }, { status: 403 });
   }
   
-  await db.delete(schema.tasks).where(eq(schema.tasks.id, id)).run();
+  await db.delete(schema.tasks).where(eq(schema.tasks.id, id)).execute();
   
   return NextResponse.json({ success: true });
 }

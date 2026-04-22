@@ -46,13 +46,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       status: 'active',
       createdAt: now,
       updatedAt: now,
-    }).run();
+    }).execute();
     
     // Link this lead to the new client
     updates.clientId = clientId;
   }
   
-  await db.update(schema.leads).set(updates).where(eq(schema.leads.id, id)).run();
+  await db.update(schema.leads).set(updates).where(eq(schema.leads.id, id)).execute();
   
   return NextResponse.json({ success: true, convertedToClient: isQualifiedToConverted });
 }
@@ -79,7 +79,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   }
   
   // Delete the lead
-  await db.delete(schema.leads).where(eq(schema.leads.id, id)).run();
+  await db.delete(schema.leads).where(eq(schema.leads.id, id)).execute();
   
   return NextResponse.json({ success: true });
 }

@@ -41,7 +41,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     updates.paymentReference = body.paymentReference;
   }
   
-  await db.update(schema.invoices).set(updates).where(eq(schema.invoices.id, id)).run();
+  await db.update(schema.invoices).set(updates).where(eq(schema.invoices.id, id)).execute();
   
   // Log status changes
   if (body.status && body.status !== currentInvoice.status) {
@@ -74,7 +74,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
   
-  await db.delete(schema.invoices).where(eq(schema.invoices.id, id)).run();
+  await db.delete(schema.invoices).where(eq(schema.invoices.id, id)).execute();
   
   // Log the action
   await logAudit({

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
   
   // Delete the tasks
-  await db.delete(schema.tasks).where(inArray(schema.tasks.id, ids)).run();
+  await db.delete(schema.tasks).where(inArray(schema.tasks.id, ids)).execute();
   
   return NextResponse.json({ success: true, deletedCount: ids.length });
 }

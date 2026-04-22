@@ -20,7 +20,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const updates: any = { ...body };
   updates.updatedAt = new Date();
   
-  await db.update(schema.clients).set(updates).where(eq(schema.clients.id, id)).run();
+  await db.update(schema.clients).set(updates).where(eq(schema.clients.id, id)).execute();
   
   // Log the action
   await logAudit({

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
   
   // Delete the leads
-  await db.delete(schema.leads).where(inArray(schema.leads.id, ids)).run();
+  await db.delete(schema.leads).where(inArray(schema.leads.id, ids)).execute();
   
   return NextResponse.json({ success: true, deletedCount: ids.length });
 }
