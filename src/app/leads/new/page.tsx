@@ -5,6 +5,7 @@ import { authConfig } from '@/auth';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
+import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +15,8 @@ async function createLead(formData: FormData) {
   const session = await getServerSession(authConfig);
   if (!session) redirect('/sign-in');
   
-  // Allow both admins and members to create leads
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
-  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
@@ -27,8 +27,10 @@ async function createLead(formData: FormData) {
   const clientId = formData.get('clientId') as string;
   const notes = formData.get('notes') as string;
 
+  const leadId = crypto.randomUUID();
+  
   await db.insert(schema.leads).values({
-    id: crypto.randomUUID(),
+    id: leadId,
     name,
     email: email || null,
     phone: phone || null,
@@ -39,6 +41,15 @@ async function createLead(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'lead_created',
+    entityType: 'lead',
+    entityId: leadId,
+    details: { name, source, status },
   });
 
   redirect('/leads');

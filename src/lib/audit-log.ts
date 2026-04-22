@@ -53,7 +53,7 @@ export async function logAudit(params: AuditLogParams) {
       ipAddress: params.ipAddress || null,
       userAgent: params.userAgent || null,
       createdAt: new Date(),
-    });
+    }).execute();
   } catch (error) {
     // Never throw - audit logging should never break the main operation
     console.error('Failed to write audit log:', error);

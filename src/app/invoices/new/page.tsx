@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { TopNav } from '@/components/top-nav';
+import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ async function createInvoice(formData: FormData) {
   const session = await getServerSession(authConfig);
   if (!session) redirect('/sign-in');
   
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   if (!isAdmin) redirect('/dashboard');
@@ -30,8 +32,10 @@ async function createInvoice(formData: FormData) {
   const invoiceCount = await db.select({ count: schema.invoices.id }).from(schema.invoices);
   const invoiceNumber = `INV-${String(invoiceCount[0]?.count || 0 + 1).padStart(4, '0')}`;
 
+  const invoiceId = crypto.randomUUID();
+  
   await db.insert(schema.invoices).values({
-    id: crypto.randomUUID(),
+    id: invoiceId,
     invoiceNumber,
     clientId,
     amount,
@@ -41,6 +45,15 @@ async function createInvoice(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'invoice_created',
+    entityType: 'invoice',
+    entityId: invoiceId,
+    details: { invoiceNumber, amount, status },
   });
 
   redirect('/invoices');

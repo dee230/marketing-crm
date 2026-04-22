@@ -5,6 +5,7 @@ import { authConfig } from '@/auth';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
+import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ async function createTask(formData: FormData) {
   const session = await getServerSession(authConfig);
   if (!session) redirect('/sign-in');
   
-  // All authenticated users can create tasks (members, admins, super_admins)
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
   if (!userRole) redirect('/sign-in');
 
@@ -26,8 +27,10 @@ async function createTask(formData: FormData) {
   const status = formData.get('status') as string;
   const dueDate = formData.get('dueDate') as string;
 
+  const taskId = crypto.randomUUID();
+  
   await db.insert(schema.tasks).values({
-    id: crypto.randomUUID(),
+    id: taskId,
     title,
     description: description || null,
     assigneeId: assigneeId || null,
@@ -37,6 +40,15 @@ async function createTask(formData: FormData) {
     dueDate: dueDate ? new Date(dueDate) : null,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'task_created',
+    entityType: 'task',
+    entityId: taskId,
+    details: { title, priority, status },
   });
 
   redirect('/tasks');

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
+import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,9 @@ async function createClient(formData: FormData) {
   const session = await getServerSession(authConfig);
   if (!session) redirect('/sign-in');
   
-  const isAdmin = (session.user as any)?.role === 'admin';
+  const userId = (session.user as any)?.id;
+  const userRole = (session.user as any)?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   if (!isAdmin) redirect('/dashboard');
 
   const name = formData.get('name') as string;
@@ -24,8 +27,10 @@ async function createClient(formData: FormData) {
   const status = formData.get('status') as string;
   const notes = formData.get('notes') as string;
 
+  const clientId = crypto.randomUUID();
+  
   await db.insert(schema.clients).values({
-    id: crypto.randomUUID(),
+    id: clientId,
     name,
     company: company || null,
     email: email || null,
@@ -34,6 +39,15 @@ async function createClient(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'client_created',
+    entityType: 'client',
+    entityId: clientId,
+    details: { name, company, status },
   });
 
   redirect('/clients');

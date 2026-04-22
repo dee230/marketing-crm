@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { canViewUsers, canManageUserRoles } from '@/lib/roles';
+import { logAudit } from '@/lib/audit-log';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
 
@@ -17,6 +18,7 @@ async function createUser(formData: FormData) {
   const session = await getServerSession(authConfig);
   if (!session) redirect('/sign-in');
   
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
   if (!canViewUsers(userRole)) redirect('/dashboard');
 
@@ -39,15 +41,26 @@ async function createUser(formData: FormData) {
     redirect('/users/new');
   }
 
+  const newUserId = crypto.randomUUID();
+  
   await db.insert(schema.users).values({
-    id: crypto.randomUUID(),
+    id: newUserId,
     name,
     email,
     password: password || null,
     role: finalRole as 'super_admin' | 'admin' | 'member',
-    emailVerified: 0, // 0 = false for Postgres integer type
+    emailVerified: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'user_created',
+    entityType: 'user',
+    entityId: newUserId,
+    details: { name, email, role: finalRole },
   });
 
   redirect('/users');
