@@ -13,6 +13,7 @@ interface Person {
   company: string | null;
   status: string;
   notes: string | null;
+  isLead?: boolean; // Flag to identify leads
 }
 
 interface Invoice {
@@ -90,7 +91,7 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
     <div className="card p-6 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium" style={{ color: '#9B9B8F' }}>
-          People at Company
+          People at Company ({people.length})
         </h3>
         {isAdmin && <AddPersonButton companyName={companyName} />}
       </div>
@@ -102,10 +103,11 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
           const personPending = personInvoices.filter(i => i.status !== 'paid');
           const isEditing = editingId === person.id;
           const personData = peopleData.get(person.id);
+          const isLead = (person as any).isLead; // Check if this is a lead
 
           return (
             <div key={person.id} className="p-4 rounded-lg" style={{ background: '#FDFBF7', border: '1px solid #E8E4DD' }}>
-              {isEditing && isAdmin ? (
+              {isEditing && isAdmin && !isLead ? (
                 <>
                   <div className="space-y-3">
                     <div>
@@ -173,16 +175,20 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
               ) : (
                 <>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#E07A5F' }}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: isLead ? '#81B29A' : '#E07A5F' }}>
                       <span className="text-white font-medium">{person.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <div>
                       <p className="font-medium" style={{ color: '#2D2A26' }}>{person.name}</p>
-                      <span className={`badge text-xs ${
-                        person.status === 'active' ? 'badge-active' : 'badge-pending'
-                      }`}>
-                        {person.status}
-                      </span>
+                      {isLead ? (
+                        <span className="badge badge-sent text-xs">Lead</span>
+                      ) : (
+                        <span className={`badge text-xs ${
+                          person.status === 'active' ? 'badge-active' : 'badge-pending'
+                        }`}>
+                          {person.status}
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -204,15 +210,15 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
                     </div>
                   </div>
                   
-                  {isAdmin && (
-                    <button
-                      onClick={() => setEditingId(person.id)}
-                      className="text-xs mt-2 px-2 py-1 rounded"
-                      style={{ color: '#E07A5F', background: 'rgba(224, 122, 95, 0.1)' }}
-                    >
-                      Edit
-                    </button>
-                  )}
+{isAdmin && !isLead && (
+                      <button
+                        onClick={() => setEditingId(person.id)}
+                        className="text-xs mt-2 px-2 py-1 rounded"
+                        style={{ color: '#E07A5F', background: 'rgba(224, 122, 95, 0.1)' }}
+                      >
+                        Edit
+                      </button>
+                    )}
                 </>
               )}
             </div>

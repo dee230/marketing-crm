@@ -23,6 +23,7 @@ function decodeCompanyName(name: string): string {
 
 async function getPeopleAtCompany(companyName: string) {
   try {
+    // Get clients (people) with this company name
     return await sqlRaw`
       SELECT * FROM clients 
       WHERE company = ${companyName} OR (company IS NULL AND name = ${companyName})
@@ -30,6 +31,28 @@ async function getPeopleAtCompany(companyName: string) {
   } catch (e) {
     console.error('Error fetching people:', e);
     return [];
+  }
+}
+
+async function getLeadsAtClient(clientId: string) {
+  try {
+    // Get leads linked to this client
+    return await sqlRaw`
+      SELECT * FROM leads WHERE client_id = ${clientId}
+    `;
+  } catch (e) {
+    console.error('Error fetching leads:', e);
+    return [];
+  }
+}
+
+async function getClientById(clientId: string) {
+  try {
+    const result = await sqlRaw`SELECT * FROM clients WHERE id = ${clientId} LIMIT 1`;
+    return result[0] || null;
+  } catch (e) {
+    console.error('Error fetching client:', e);
+    return null;
   }
 }
 
@@ -61,6 +84,28 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   
   const people = await getPeopleAtCompany(companyName);
+  
+  // Also get leads linked to this client/company
+  let linkedLeads: any[] = [];
+  if (people.length > 0) {
+    // Get leads for each person at the company
+    for (const person of people) {
+      const leads = await getLeadsAtClient(person.id);
+      linkedLeads = [...linkedLeads, ...leads];
+    }
+  }
+  
+  // Combine people and leads for the people list
+  const allPeople = [...people, ...linkedLeads.map(lead => ({
+    id: lead.id,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    company: lead.company,
+    status: lead.status === 'converted' ? 'active' : lead.status,
+    notes: lead.notes,
+    isLead: true, // Flag to identify leads in the UI
+  }))];
   
   // Show helpful error if no client found
   if (people.length === 0) {
@@ -148,7 +193,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold" style={{ color: '#2D2A26' }}>{companyName}</h1>
-                <p className="text-sm" style={{ color: '#9B9B8F' }}>{people.length} People</p>
+                <p className="text-sm" style={{ color: '#9B9B8F' }}>{people.length} People{linkedLeads.length > 0 ? ` + ${linkedLeads.length} Lead(s)` : ''}</p>
               </div>
             </div>
 
@@ -204,7 +249,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm" style={{ color: '#9B9B8F' }}>Total People</span>
-                    <span className="text-sm font-medium" style={{ color: '#2D2A26' }}>{people.length}</span>
+                    <span className="text-sm font-medium" style={{ color: '#2D2A26' }}>{people.length}{linkedLeads.length > 0 ? ` (+${linkedLeads.length} leads)` : ''}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm" style={{ color: '#9B9B8F' }}>Total Invoices</span>
@@ -238,7 +283,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
             <CalendarSection tasks={allTasks} />
 
             {/* People at Company */}
-            <PeopleList people={people} allInvoices={allInvoices} allTasks={allTasks} isAdmin={isAdmin} companyName={companyName} />
+            <PeopleList people={allPeople} allInvoices={allInvoices} allTasks={allTasks} isAdmin={isAdmin} companyName={companyName} />
 
             <div className="mt-6">
               <Link href="/clients" className="text-sm" style={{ color: '#E07A5F' }}>← Back to Companies</Link>
