@@ -65,22 +65,30 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: true, convertedToClient: true, clientId });
   }
   
-  // Regular update
-  const updates: string[] = [];
-  
-  if (body.name !== undefined) updates.push(`name = '${body.name.replace(/'/g, "''")}'`);
-  if (body.email !== undefined) updates.push(`email = ${body.email ? `'${body.email.replace(/'/g, "''")}'` : 'NULL'}`);
-  if (body.phone !== undefined) updates.push(`phone = ${body.phone ? `'${body.phone.replace(/'/g, "''")}'` : 'NULL'}`);
-  if (body.company !== undefined) updates.push(`company = ${body.company ? `'${body.company.replace(/'/g, "''")}'` : 'NULL'}`);
-  if (body.source !== undefined) updates.push(`source = '${body.source}'`);
-  if (body.status !== undefined) updates.push(`status = '${body.status}'`);
-  if (body.notes !== undefined) updates.push(`notes = ${body.notes ? `'${body.notes.replace(/'/g, "''")}'` : 'NULL'}`);
-  if (body.client_id !== undefined) updates.push(`client_id = ${body.client_id ? `'${body.client_id}'` : 'NULL'}`);
-  
-  updates.push(`updated_at = '${now}'`);
-  
-  if (updates.length > 1) {
-    await sqlRaw`UPDATE leads SET ${sqlRaw(updates.join(', '))} WHERE id = ${id}`;
+  // Regular update - use individual field updates
+  if (body.name !== undefined) {
+    await sqlRaw`UPDATE leads SET name = ${body.name}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.email !== undefined) {
+    await sqlRaw`UPDATE leads SET email = ${body.email || null}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.phone !== undefined) {
+    await sqlRaw`UPDATE leads SET phone = ${body.phone || null}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.company !== undefined) {
+    await sqlRaw`UPDATE leads SET company = ${body.company || null}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.source !== undefined) {
+    await sqlRaw`UPDATE leads SET source = ${body.source}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.status !== undefined) {
+    await sqlRaw`UPDATE leads SET status = ${body.status}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.notes !== undefined) {
+    await sqlRaw`UPDATE leads SET notes = ${body.notes || null}, updated_at = ${now} WHERE id = ${id}`;
+  }
+  if (body.client_id !== undefined) {
+    await sqlRaw`UPDATE leads SET client_id = ${body.client_id || null}, updated_at = ${now} WHERE id = ${id}`;
   }
   
   // Log audit
