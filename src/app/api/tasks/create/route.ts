@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
-import * as schema from '@/db/schema';
+import { neon } from '@neondatabase/serverless';
 
 export async function POST(request: Request) {
   try {
@@ -8,11 +7,11 @@ export async function POST(request: Request) {
     
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
-    const assigneeId = formData.get('assigneeId') as string;
-    const clientId = formData.get('clientId') as string;
-    const priority = formData.get('priority') as string;
-    const status = formData.get('status') as string;
-    const dueDate = formData.get('dueDate') as string;
+    const assigneeId = formData.get('assigneeId') as string || null;
+    const clientId = formData.get('clientId') as string || null;
+    const priority = formData.get('priority') as string || 'medium';
+    const status = formData.get('status') as string || 'pending';
+    const dueDate = formData.get('dueDate') as string || null;
     
     if (!title) {
       return NextResponse.json(
@@ -22,15 +21,17 @@ export async function POST(request: Request) {
     }
     
     const taskId = crypto.randomUUID();
-    const now = new Date();
+    const now = new Date().toISOString();
     
-    // Insert with only required fields - let defaults handle the rest
-    const result = await db.insert(schema.tasks).values({
-      id: taskId,
-      title: title,
-      status: (status || 'pending') as any,
-      priority: (priority || 'medium') as any,
-    }).execute();
+    // Use direct SQL with all columns explicitly
+    const sql = process.env.DATABASE_URL!;
+    const db = neon(sql);
+    
+    const result = await db.execute(
+      `INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [taskId, title, description, assigneeId, clientId, status, priority, dueDate || null, now, now]
+    );
     
     return NextResponse.json({
       success: true,
