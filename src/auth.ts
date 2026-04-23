@@ -42,7 +42,6 @@ export const authConfig: NextAuthOptions = {
       },
     }),
   ],
-  // CSRF disabled - needed for Vercel deployment
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
