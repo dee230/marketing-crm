@@ -5,11 +5,11 @@ export async function POST() {
   try {
     console.log('Running migration: Adding pending status columns...');
     
-    // Add pending status columns if they don't exist
+    // Add pending status columns if they don't exist (no foreign key for neon compatibility)
     await sqlRaw`
       ALTER TABLE tasks 
       ADD COLUMN IF NOT EXISTS pending_status TEXT,
-      ADD COLUMN IF NOT EXISTS pending_status_requested_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS pending_status_requested_by TEXT,
       ADD COLUMN IF NOT EXISTS pending_status_requested_at TIMESTAMP WITH TIME ZONE,
       ADD COLUMN IF NOT EXISTS status_locked_at TIMESTAMP WITH TIME ZONE
     `;
