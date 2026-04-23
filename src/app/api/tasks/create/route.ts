@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
+import * as schema from '@/db/schema';
 
 export async function POST(request: Request) {
   try {
@@ -23,20 +24,19 @@ export async function POST(request: Request) {
     const taskId = crypto.randomUUID();
     const now = new Date();
     
-    // Use db.execute with raw SQL template - Neon doesn't support $params, use plain string building
-    // Note: This is potentially unsafe but we control the inputs
-    const dueDateVal = dueDate ? `'${dueDate}'` : 'NULL';
-    const descriptionVal = description ? `'${description}'` : 'NULL';
-    const assigneeIdVal = assigneeId ? `'${assigneeId}'` : 'NULL';
-    const clientIdVal = clientId ? `'${clientId}'` : 'NULL';
-    
-    const insertSQL = `
-      INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at)
-      VALUES ('${taskId}', '${title.replace(/'/g, "''")}', ${descriptionVal}, ${assigneeIdVal}, ${clientIdVal}, '${status}', '${priority}', ${dueDateVal}, '${now.toISOString()}', '${now.toISOString()}')
-      RETURNING id
-    `.trim().replace(/\s+/g, ' ');
-    
-    const result = await db.execute(insertSQL);
+    // This should work - it's exactly like the clients/new implementation
+    await db.insert(schema.tasks).values({
+      id: taskId,
+      title,
+      description,
+      assigneeId,
+      clientId,
+      status: status as any,
+      priority: priority as any,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      createdAt: now,
+      updatedAt: now,
+    }).execute();
     
     return NextResponse.json({
       success: true,

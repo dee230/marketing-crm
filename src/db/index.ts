@@ -19,4 +19,10 @@ const sql = connectionString
 
 export const db = drizzle(sql, { schema });
 
+// Export schema for use in API routes
+export { schema };
+
+// Export raw SQL for direct queries  
+export const sqlRaw = sql;
+
 export type Database = typeof db;
