@@ -11,8 +11,16 @@ export const dynamic = 'force-dynamic';
 async function createTask(formData: FormData) {
   'use server';
   
+  console.log('createTask called');
+  
+  // Get session for audit
   const session = await getSession();
-  if (!session) redirect('/sign-in');
+  console.log('Session:', session);
+  
+  if (!session) {
+    console.log('No session - redirecting to sign-in');
+    redirect('/sign-in');
+  }
   
   const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role;
@@ -28,18 +36,27 @@ async function createTask(formData: FormData) {
 
   const taskId = crypto.randomUUID();
   
-  await db.insert(schema.tasks).values({
-    id: taskId,
-    title,
-    description: description || null,
-    assigneeId: assigneeId || null,
-    clientId: clientId || null,
-    priority: priority as any,
-    status: status as any,
-    dueDate: dueDate ? new Date(dueDate) : null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }).execute();
+  console.log('Creating task:', { taskId, title, priority, status, dueDate });
+  
+  try {
+    await db.insert(schema.tasks).values({
+      id: taskId,
+      title,
+      description: description || null,
+      assigneeId: assigneeId || null,
+      clientId: clientId || null,
+      priority: priority as any,
+      status: status as any,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).execute();
+    
+    console.log('Task inserted successfully');
+  } catch (err) {
+    console.error('Error inserting task:', err);
+    throw err;
+  }
 
   // Log audit
   await logAudit({
