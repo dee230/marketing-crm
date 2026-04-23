@@ -24,6 +24,11 @@ async function getClient(clientId: string | null) {
   return result[0] || null;
 }
 
+async function getAllClients() {
+  const result = await sqlRaw`SELECT id, name, company FROM clients ORDER BY company NULLS LAST, name`;
+  return result;
+}
+
 export default async function LeadDetailPage({ params }: PageProps) {
   const { id } = await params;
   const session = await getSession();
@@ -35,6 +40,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const client = await getClient(lead.clientId);
+  const clients = await getAllClients();
 
   return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
@@ -64,7 +70,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
               <div className="card p-6 md:col-span-2">
 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-sm font-medium" style={{ color: '#9B9B8F' }}>Contact Information</h3>
-                  <EditLeadForm lead={lead} isAdmin={isAdmin} />
+                  <EditLeadForm lead={lead} isAdmin={isAdmin} clients={clients} />
                 </div>
 
                 <div className="space-y-4">

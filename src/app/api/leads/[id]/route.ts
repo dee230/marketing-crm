@@ -75,6 +75,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.source !== undefined) updates.push(`source = '${body.source}'`);
   if (body.status !== undefined) updates.push(`status = '${body.status}'`);
   if (body.notes !== undefined) updates.push(`notes = ${body.notes ? `'${body.notes.replace(/'/g, "''")}'` : 'NULL'}`);
+  if (body.client_id !== undefined) updates.push(`client_id = ${body.client_id ? `'${body.client_id}'` : 'NULL'}`);
   
   updates.push(`updated_at = '${now}'`);
   

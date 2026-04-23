@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Lead {
@@ -12,19 +12,28 @@ interface Lead {
   source: string;
   status: string;
   notes: string | null;
+  client_id: string | null;
   linkedinProfileId: string | null;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  company: string | null;
 }
 
 interface EditLeadFormProps {
   lead: Lead;
   isAdmin: boolean;
+  clients: Client[];
 }
 
-export function EditLeadForm({ lead, isAdmin }: EditLeadFormProps) {
+export function EditLeadForm({ lead, isAdmin, clients }: EditLeadFormProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [leadData, setLeadData] = useState<Lead>(lead);
   const [saving, setSaving] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(lead.client_id || '');
 
   const updateField = (field: keyof Lead, value: string) => {
     setLeadData({ ...leadData, [field]: value || null });
@@ -34,7 +43,7 @@ export function EditLeadForm({ lead, isAdmin }: EditLeadFormProps) {
     setSaving(true);
     
     if (isAdmin) {
-      // Full update for admins
+      // Full update for admins - includes client_id
       await fetch(`/api/leads/${lead.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -46,6 +55,7 @@ export function EditLeadForm({ lead, isAdmin }: EditLeadFormProps) {
           source: leadData.source,
           status: leadData.status,
           notes: leadData.notes,
+          client_id: selectedClientId || null,
         }),
       });
     } else {
@@ -152,6 +162,26 @@ export function EditLeadForm({ lead, isAdmin }: EditLeadFormProps) {
               className="w-full p-2 rounded border text-sm"
               style={{ borderColor: '#E8E4DD' }}
             />
+          </div>
+
+          <div>
+            <label className="text-xs" style={{ color: '#9B9B8F' }}>Link to Client</label>
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="w-full p-2 rounded border text-sm"
+              style={{ borderColor: '#E8E4DD' }}
+            >
+              <option value="">-- No client linked --</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company || client.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs mt-1" style={{ color: '#9B9B8F' }}>
+              Select an existing company to link this lead to
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
