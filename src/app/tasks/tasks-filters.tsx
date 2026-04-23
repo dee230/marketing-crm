@@ -9,14 +9,110 @@ interface Task {
   title: string;
   status: string;
   priority: string;
-  dueDate: Date | null;
-  assigneeName: string | null | undefined;
-  clientName: string | null | undefined;
+  due_date: string | null;
+  assignee_name: string | null | undefined;
+  client_name: string | null | undefined;
+  pending_status?: string | null;
+  [key: string]: any;
 }
 
 interface TasksFiltersProps {
   tasks: Task[];
   isAdmin: boolean;
+}
+
+function StatusSelect({ task }: { task: Task }) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === task.status) return;
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.error || 'Failed to update status');
+        return;
+      }
+      
+      if (data.pendingApproval) {
+        // Show pending message
+        alert('Status change request submitted. Waiting for admin approval.');
+      }
+      
+      router.refresh();
+    } catch (err) {
+      setError('Failed to update status');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statuses = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'in-progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'badge-completed';
+      case 'in-progress': return 'badge-sent';
+      default: return 'badge-pending';
+    }
+  };
+
+  // Show pending status indicator
+  if (task.pending_status && task.pending_status !== task.status) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className={`badge ${getStatusColor(task.status)}`}>
+          {task.status}
+        </span>
+        <span className="text-gray-400">→</span>
+        <span className="badge bg-yellow-100 text-yellow-800 text-xs">
+          {task.pending_status}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {saving ? (
+        <span className="text-sm" style={{ color: '#9B9B8F' }}>...</span>
+      ) : (
+        <select
+          value={task.status}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          className="text-sm px-2 py-1 rounded border"
+          style={{ 
+            borderColor: '#E8E4DD', 
+            background: '#FFFFFF', 
+            color: '#2D2A26',
+            cursor: 'pointer'
+          }}
+          disabled={saving}
+        >
+          {statuses.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+      )}
+      {error && <div className="text-xs text-red-500 mt-1">{error}</div>}
+    </div>
+  );
 }
 
 function DeleteTaskButton({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
@@ -245,8 +341,8 @@ export function TasksFilters({ tasks, isAdmin }: TasksFiltersProps) {
                       {task.title}
                     </Link>
                   </td>
-                  <td style={{ color: '#9B9B8F' }}>{task.assigneeName || '-'}</td>
-                  <td style={{ color: '#9B9B8F' }}>{task.clientName || '-'}</td>
+                  <td style={{ color: '#9B9B8F' }}>{task.assignee_name || '-'}</td>
+                  <td style={{ color: '#9B9B8F' }}>{task.client_name || '-'}</td>
                   <td>
                     <span className={`badge ${
                       task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
@@ -258,16 +354,10 @@ export function TasksFilters({ tasks, isAdmin }: TasksFiltersProps) {
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${
-                      task.status === 'completed' ? 'badge-completed' :
-                      task.status === 'in-progress' ? 'badge-sent' :
-                      'badge-pending'
-                    }`}>
-                      {task.status}
-                    </span>
+                    <StatusSelect task={task} />
                   </td>
                   <td style={{ color: '#9B9B8F' }}>
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                    {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
                   </td>
                   {isAdmin && (
                     <td>

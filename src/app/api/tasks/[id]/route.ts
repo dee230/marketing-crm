@@ -21,8 +21,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   
   // Get session
   const session = await getSession();
+  
+  // Check if user is logged in
+  if (!session) {
+    return NextResponse.json({ error: 'Not authenticated. Please log in.' }, { status: 401 });
+  }
+  
   const userId = (session?.user as any)?.id;
   const userRole = (session?.user as any)?.role;
+  
+  // Check if user has valid role
+  if (!userRole) {
+    return NextResponse.json({ error: 'Invalid session. Please log in again.' }, { status: 401 });
+  }
+  
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const now = new Date().toISOString();
   

@@ -48,7 +48,8 @@ export default async function NewClientPage() {
   const session = await getSession();
   if (!session) redirect('/sign-in');
 
-  const isAdmin = (session.user as any)?.role === 'admin';
+  const userRole = (session.user as any)?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   if (!isAdmin) redirect('/dashboard');
 
   return (
