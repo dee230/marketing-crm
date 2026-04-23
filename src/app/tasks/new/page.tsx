@@ -66,13 +66,13 @@ async function getUsersAndClients() {
   let clients: any[] = [];
   
   try {
-    users = await db.select().from(schema.users).execute();
+    users = await db.select().from(schema.users);
   } catch (e) {
     console.error('Error fetching users:', e);
   }
   
   try {
-    clients = await db.select().from(schema.clients).execute();
+    clients = await db.select().from(schema.clients);
   } catch (e) {
     console.error('Error fetching clients:', e);
   }

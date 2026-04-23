@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
@@ -22,7 +21,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   
   // Get session
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   const userId = (session?.user as any)?.id;
   const userRole = (session?.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
@@ -48,7 +47,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         updates.completedAt = new Date();
       }
       
-      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id));
       
       // Log audit
       await logAudit({
@@ -73,7 +72,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         updatedAt: new Date(),
       };
       
-      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id));
       
       // Log audit
       await logAudit({
@@ -113,7 +112,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updatedAt: new Date(),
     };
     
-    await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+    await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id));
     
     // Log audit
     await logAudit({
@@ -146,7 +145,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
   }
   
-  await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+  await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id));
   
   // Log audit
   if (newStatus && newStatus !== currentTask.status) {
@@ -169,7 +168,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params;
   
   // Only admins can delete tasks
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   const userRole = (session?.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   
@@ -177,7 +176,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Only admins can delete tasks' }, { status: 403 });
   }
   
-  await db.delete(schema.tasks).where(eq(schema.tasks.id, id)).execute();
+  await db.delete(schema.tasks).where(eq(schema.tasks.id, id));
   
   return NextResponse.json({ success: true });
 }

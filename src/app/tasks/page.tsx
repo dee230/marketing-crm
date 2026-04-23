@@ -40,8 +40,7 @@ async function getTasks(page: number, search?: string) {
       .where(whereClause)
       .orderBy(schema.tasks.dueDate)
       .limit(ITEMS_PER_PAGE)
-      .offset(offset)
-      .execute();
+      .offset(offset);
   } catch (e) {
     console.error('Error fetching tasks:', e);
   }
@@ -49,8 +48,7 @@ async function getTasks(page: number, search?: string) {
   try {
     const countResult = await db.select({ count: sql<number>`count(*)` })
       .from(schema.tasks)
-      .where(whereClause)
-      .execute();
+      .where(whereClause);
     totalCount = countResult[0]?.count || 0;
   } catch (e) {
     console.error('Error counting tasks:', e);
@@ -61,8 +59,8 @@ async function getTasks(page: number, search?: string) {
   
   try {
     const result = await Promise.all([
-      db.select().from(schema.users).execute(),
-      db.select().from(schema.clients).execute(),
+      db.select().from(schema.users),
+      db.select().from(schema.clients),
     ]);
     users = result[0] || [];
     clients = result[1] || [];
