@@ -7,6 +7,7 @@ import { sqlRaw } from '@/db';
 import { TasksFilters } from './tasks-filters';
 import { Pagination } from '@/components/pagination';
 import { SearchInput } from '@/components/search-input';
+import { PendingApprovalCard } from './pending-approval-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +66,30 @@ async function getTasks(page: number, search?: string) {
   return { tasks, totalCount };
 }
 
+// Get tasks with pending status changes for admin approval
+async function getPendingApprovalTasks() {
+  let pendingTasks: any[] = [];
+  
+  try {
+    const result = await sqlRaw`
+      SELECT t.*, u.name as assignee_name, u.email as assignee_email, c.name as client_name,
+             requester.name as requested_by_name
+      FROM tasks t
+      LEFT JOIN users u ON t.assignee_id = u.id
+      LEFT JOIN clients c ON t.client_id = c.id
+      LEFT JOIN users requester ON t.pending_status_requested_by = requester.id
+      WHERE t.pending_status IS NOT NULL AND t.pending_status != t.status
+      ORDER BY t.pending_status_requested_at DESC
+      LIMIT 20
+    `;
+    pendingTasks = result;
+  } catch (e) {
+    console.error('Error fetching pending tasks:', e);
+  }
+  
+  return pendingTasks;
+}
+
 export default async function TasksPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const session = await getSession();
@@ -78,6 +103,9 @@ export default async function TasksPage({ searchParams }: PageProps) {
   
   const { tasks, totalCount } = await getTasks(currentPage, searchQuery);
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  
+  // Get pending approval tasks for admins
+  const pendingTasks = isAdmin ? await getPendingApprovalTasks() : [];
 
   return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
@@ -91,6 +119,20 @@ export default async function TasksPage({ searchParams }: PageProps) {
 
         <main className="flex-1 p-8">
           <div className="animate-fade-in">
+            {/* Pending Approvals Section - Only for Admins */}
+            {isAdmin && pendingTasks.length > 0 && (
+              <div className="mb-8 p-4 rounded-lg" style={{ background: '#FFF8E5', border: '1px solid #F2CC8F' }}>
+                <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>
+                  ⏳ Pending Status Approvals ({pendingTasks.length})
+                </h2>
+                <div className="space-y-3">
+                  {pendingTasks.map((task) => (
+                    <PendingApprovalCard key={task.id} task={task} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h1 className="text-2xl font-bold" style={{ color: '#2D2A26' }}>Tasks</h1>
