@@ -1,6 +1,5 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,32 +7,36 @@ import Link from 'next/link';
 export default function SignInPage() {
   const router = useRouter();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: '/dashboard',
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        setError('Invalid email or password. Please try again.');
-      } else if (result?.ok) {
+      const data = await response.json();
+
+      if (data.success) {
         router.push('/dashboard');
         router.refresh();
       } else {
-        setError('An unexpected error occurred. Please try again.');
+        setError(data.error || 'Invalid email or password');
       }
     } catch (err) {
-      setError('Unable to connect. Please check your internet connection.');
+      setError('Unable to connect. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,14 +98,15 @@ export default function SignInPage() {
           
           <button
             type="submit"
-            className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 hover:translate-y-[-1px]"
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 hover:translate-y-[-1px] disabled:opacity-50"
             style={{ 
               background: '#E07A5F', 
               color: 'white',
               boxShadow: '0 4px 12px rgba(224, 122, 95, 0.3)'
             }}
           >
-            Sign In
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
         
