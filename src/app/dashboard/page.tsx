@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
 import { db } from '@/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { DashboardCalendar } from './calendar';
 import { ActivityFeed } from './activity-feed';
@@ -12,16 +12,63 @@ import { ActivityFeed } from './activity-feed';
 export const dynamic = 'force-dynamic';
 
 async function getStats() {
-  const allClients = await db.select().from(schema.clients).execute();
-  const allLeads = await db.select().from(schema.leads).execute();
-  const allInvoices = await db.select().from(schema.invoices).execute();
-  const allTasksFull = await db.select().from(schema.tasks).execute();
-  const pendingTasksList = await db.select().from(schema.tasks).where(eq(schema.tasks.status, 'pending')).orderBy(schema.tasks.dueDate).limit(5).execute();
+  let allClients: any[] = [];
+  let allLeads: any[] = [];
+  let allInvoices: any[] = [];
+  let allTasksFull: any[] = [];
+  let pendingTasksList: any[] = [];
+  let recentLeads: any[] = [];
+  let recentInvoices: any[] = [];
+  let recentTasks: any[] = [];
 
-  const recentLeads = await db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt)).limit(5).execute();
-  const recentInvoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).limit(5).execute();
-  const recentTasks = await db.select().from(schema.tasks).orderBy(desc(schema.tasks.createdAt)).limit(5).execute();
-  
+  try {
+    allClients = await db.select().from(schema.clients).execute();
+  } catch (e) {
+    console.error('Error fetching clients:', e);
+  }
+
+  try {
+    allLeads = await db.select().from(schema.leads).execute();
+  } catch (e) {
+    console.error('Error fetching leads:', e);
+  }
+
+  try {
+    allInvoices = await db.select().from(schema.invoices).execute();
+  } catch (e) {
+    console.error('Error fetching invoices:', e);
+  }
+
+  try {
+    allTasksFull = await db.select().from(schema.tasks).execute();
+  } catch (e) {
+    console.error('Error fetching tasks:', e);
+  }
+
+  try {
+    pendingTasksList = await db.select().from(schema.tasks).where(eq(schema.tasks.status, 'pending')).limit(5).execute();
+  } catch (e) {
+    console.error('Error fetching pending tasks:', e);
+  }
+
+  try {
+    recentLeads = await db.select().from(schema.leads).limit(5).execute();
+  } catch (e) {
+    console.error('Error fetching recent leads:', e);
+  }
+
+  try {
+    recentInvoices = await db.select().from(schema.invoices).limit(5).execute();
+  } catch (e) {
+    console.error('Error fetching recent invoices:', e);
+  }
+
+  try {
+    recentTasks = await db.select().from(schema.tasks).limit(5).execute();
+  } catch (e) {
+    console.error('Error fetching recent tasks:', e);
+  }
+
   const clientMap = new Map(allClients.map(c => [c.id, c]));
   const tasksWithClients = allTasksFull.map(task => ({
     ...task,
@@ -45,7 +92,7 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect('/sign-in');
 
-  const stats = await getStats();
+  const stats = getStats();
   const userRole = session.user.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 

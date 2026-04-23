@@ -7,6 +7,11 @@ interface SessionUser {
   role: string;
 }
 
+function base64Decode(str: string): string {
+  const buff = Buffer.from(str, 'base64');
+  return buff.toString('utf-8');
+}
+
 export async function getSession(): Promise<{ user: SessionUser } | null> {
   const cookieStore = await cookies();
   
@@ -14,7 +19,7 @@ export async function getSession(): Promise<{ user: SessionUser } | null> {
   const customSession = cookieStore.get('crm-session');
   if (customSession) {
     try {
-      const decoded = JSON.parse(Buffer.from(customSession.value, 'base64').toString());
+      const decoded = JSON.parse(base64Decode(customSession.value));
       if (decoded.exp && decoded.exp < Date.now()) {
         return null;
       }
@@ -35,7 +40,7 @@ export async function getSession(): Promise<{ user: SessionUser } | null> {
   const nextAuthSession = cookieStore.get('next-auth.session-token');
   if (nextAuthSession) {
     try {
-      const decoded = JSON.parse(Buffer.from(nextAuthSession.value, 'base64').toString());
+      const decoded = JSON.parse(base64Decode(nextAuthSession.value));
       if (decoded.exp && decoded.exp < Date.now()) {
         return null;
       }
