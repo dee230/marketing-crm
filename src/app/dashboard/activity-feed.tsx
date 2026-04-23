@@ -101,6 +101,7 @@ export function ActivityFeed({ recentLeads, recentTasks, recentInvoices }: Activ
       action: invoice.status === 'paid' ? 'completed' : 'created',
       name: invoice.invoiceNumber,
       details: `$${invoice.amount.toFixed(2)}`,
+      timestamp: invoice.createdAt,
     });
   });
 
