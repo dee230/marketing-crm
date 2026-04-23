@@ -107,7 +107,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
                   </svg>
                 </Link>
                 <div>
-                  <h1 className="text-2xl font-bold" style={{ color: '#2D2A26' }}>{invoice.invoiceNumber}</h1>
+                  <h1 className="text-2xl font-bold" style={{ color: '#2D2A26' }}>{(invoice as any).invoice_number || invoice.invoiceNumber || 'Invoice'}</h1>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Invoice Details</p>
                 </div>
               </div>
