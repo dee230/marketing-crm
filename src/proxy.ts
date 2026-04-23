@@ -5,32 +5,30 @@ import { getToken } from 'next-auth/jwt';
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   
-  // Allow ALL API routes and static files
-  if (
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/_next/') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
+  // Allow all API routes - NextAuth and app APIs
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+  
+  // Allow all static files
+  if (pathname.startsWith('/_next/') || pathname.startsWith('/favicon')) {
     return NextResponse.next();
   }
   
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
   
-  const isAuthPage = pathname === '/sign-in';
-  const isPublicPage = pathname === '/' || pathname === '/forgot-password' || pathname === '/reset-password';
+  // Public pages that don't need auth
+  const publicPages = ['/', '/sign-in', '/forgot-password', '/reset-password'];
   
-  // If on auth page and have token, redirect to dashboard
-  if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  
-  // If on public page, allow
-  if (isPublicPage) {
+  if (publicPages.includes(pathname)) {
+    // If logged in and trying to access sign-in, redirect to dashboard
+    if (pathname === '/sign-in' && token) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
     return NextResponse.next();
   }
   
-  // For all other pages, require auth
+  // All other pages require authentication
   if (!token) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
@@ -38,7 +36,7 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Match all page routes, exclude API and static
+// Match all routes except static files
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).)*'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).)*'],
 };
