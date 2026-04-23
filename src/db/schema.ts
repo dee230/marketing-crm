@@ -135,6 +135,10 @@ export const tasks = pgTable('tasks', {
   dueDate: timestamp('due_date', { mode: 'date' }),
   completedAt: timestamp('completed_at', { mode: 'date' }),
   statusLockedAt: timestamp('status_locked_at', { mode: 'date' }),
+  // Pending status change fields (for member → admin approval workflow)
+  pendingStatus: text('pending_status'), // The status member is requesting
+  pendingStatusRequestedBy: text('pending_status_requested_by').references(() => users.id, { onDelete: 'set null' }),
+  pendingStatusRequestedAt: timestamp('pending_status_requested_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });

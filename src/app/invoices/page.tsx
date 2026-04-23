@@ -28,7 +28,7 @@ async function markOverdueInvoices() {
       await db.update(schema.invoices)
         .set({ status: 'overdue', updatedAt: now })
         .where(eq(schema.invoices.id, invoice.id))
-        .run();
+        .execute();
     }
   }
 }

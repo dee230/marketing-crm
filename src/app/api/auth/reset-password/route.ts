@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         updatedAt: new Date(),
       })
       .where(eq(schema.users.id, resetRequest.userId))
-      .run();
+      .execute();
 
     // Mark the reset request as used
     await db.update(schema.passwordResetRequests)
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         usedAt: new Date(),
       })
       .where(eq(schema.passwordResetRequests.id, resetRequest.id))
-      .run();
+      .execute();
 
     // Log the action
     await logAudit({

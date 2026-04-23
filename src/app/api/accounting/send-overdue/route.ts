@@ -117,7 +117,7 @@ export async function POST(
         .update(schema.invoices)
         .set({ status: 'overdue', updatedAt: new Date() })
         .where(eq(schema.invoices.id, id))
-        .run();
+        .execute();
     }
 
     // Store in notes
@@ -128,7 +128,7 @@ export async function POST(
       .update(schema.invoices)
       .set({ notes: currentNotes + overdueLog, updatedAt: new Date() })
       .where(eq(schema.invoices.id, id))
-      .run();
+      .execute();
 
     return NextResponse.json({ 
       success: true, 
@@ -187,7 +187,7 @@ export async function POST(
         .update(schema.invoices)
         .set({ status: 'overdue', updatedAt: new Date() })
         .where(eq(schema.invoices.id, id))
-        .run();
+        .execute();
       statusUpdated = true;
     }
 
@@ -199,7 +199,7 @@ export async function POST(
       .update(schema.invoices)
       .set({ notes: currentNotes + overdueLog, updatedAt: new Date() })
       .where(eq(schema.invoices.id, id))
-      .run();
+      .execute();
 
     return NextResponse.json({
       success: true,

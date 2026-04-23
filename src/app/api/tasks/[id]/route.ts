@@ -4,6 +4,7 @@ import { authConfig } from '@/auth';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
+import { logAudit } from '@/lib/audit-log';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,21 +14,87 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const body = await request.json();
   
-  // Get current task to check status
+  // Get current task
   const [currentTask] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).limit(1);
   
   if (!currentTask) {
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
   }
   
-  // Get session to check if admin
+  // Get session
   const session = await getServerSession(authConfig);
-  const isAdmin = session && (session.user as any)?.role === 'admin';
+  const userId = (session?.user as any)?.id;
+  const userRole = (session?.user as any)?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   
-  // Check if status is locked (was previously changed)
+  // Handle admin approving/rejecting a pending status change
+  if (body.approvePending !== undefined && currentTask.pendingStatus) {
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Only admins can approve status changes' }, { status: 403 });
+    }
+    
+    if (body.approvePending) {
+      // Approve: Apply the pending status
+      const updates: any = {
+        status: currentTask.pendingStatus,
+        pendingStatus: null,
+        pendingStatusRequestedBy: null,
+        pendingStatusRequestedAt: null,
+        updatedAt: new Date(),
+      };
+      
+      // If completing task, set completedAt
+      if (currentTask.pendingStatus === 'completed') {
+        updates.completedAt = new Date();
+      }
+      
+      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+      
+      // Log audit
+      await logAudit({
+        userId,
+        action: 'task_status_changed',
+        entityType: 'task',
+        entityId: id,
+        details: { 
+          oldStatus: currentTask.status, 
+          newStatus: currentTask.pendingStatus,
+          approved: true
+        },
+      });
+      
+      return NextResponse.json({ success: true, message: 'Status change approved' });
+    } else {
+      // Reject: Clear pending status
+      const updates = {
+        pendingStatus: null,
+        pendingStatusRequestedBy: null,
+        pendingStatusRequestedAt: null,
+        updatedAt: new Date(),
+      };
+      
+      await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+      
+      // Log audit
+      await logAudit({
+        userId,
+        action: 'task_status_changed',
+        entityType: 'task',
+        entityId: id,
+        details: { 
+          requestedStatus: currentTask.pendingStatus,
+          approved: false
+        },
+      });
+      
+      return NextResponse.json({ success: true, message: 'Status change rejected' });
+    }
+  }
+  
+  // Regular status change logic
   const isStatusLocked = currentTask.statusLockedAt !== null;
   
-  // If status is locked and user is not admin, prevent change
+  // If status is locked and user is not admin, prevent change (unless it's a pending request)
   if (isStatusLocked && !isAdmin) {
     return NextResponse.json({ 
       error: 'Status has been changed and can only be modified by admins',
@@ -35,27 +102,65 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }, { status: 403 });
   }
   
-  const updates: any = { ...body };
-  updates.updatedAt = new Date();
+  const newStatus = body.status;
   
-  // If status is changing and wasn't previously locked, lock it
-  if (body.status && body.status !== currentTask.status && !isStatusLocked) {
-    updates.statusLockedAt = new Date();
+  // If member (not admin) is changing status, set as pending
+  if (!isAdmin && newStatus && newStatus !== currentTask.status) {
+    const updates = {
+      pendingStatus: newStatus,
+      pendingStatusRequestedBy: userId,
+      pendingStatusRequestedAt: new Date(),
+      updatedAt: new Date(),
+    };
     
-    // If completing task, set completedAt
-    if (body.status === 'completed') {
-      updates.completedAt = new Date();
-    }
+    await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+    
+    // Log audit
+    await logAudit({
+      userId,
+      action: 'task_status_changed',
+      entityType: 'task',
+      entityId: id,
+      details: { 
+        oldStatus: currentTask.status, 
+        newStatus: newStatus,
+        pendingApproval: true
+      },
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Status change pending admin approval',
+      pendingApproval: true 
+    });
   }
   
-  // If admin is changing status on a locked task, allow it
-  if (body.status && body.status !== currentTask.status && isStatusLocked && isAdmin) {
-    if (body.status === 'completed') {
+  // Admin can change status directly
+  const updates: any = { updatedAt: new Date() };
+  
+  if (newStatus && newStatus !== currentTask.status) {
+    updates.status = newStatus;
+    
+    if (newStatus === 'completed') {
       updates.completedAt = new Date();
     }
   }
   
   await db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, id)).execute();
+  
+  // Log audit
+  if (newStatus && newStatus !== currentTask.status) {
+    await logAudit({
+      userId,
+      action: 'task_status_changed',
+      entityType: 'task',
+      entityId: id,
+      details: { 
+        oldStatus: currentTask.status, 
+        newStatus: newStatus 
+      },
+    });
+  }
   
   return NextResponse.json({ success: true });
 }
@@ -65,7 +170,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   
   // Only admins can delete tasks
   const session = await getServerSession(authConfig);
-  const userRole = (session.user as any)?.role;
+  const userRole = (session?.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   
   if (!isAdmin) {

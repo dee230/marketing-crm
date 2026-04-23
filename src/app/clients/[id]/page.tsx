@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/auth';
 import { TopNav } from '@/components/top-nav';
+import { SidebarNav } from '@/components/sidebar-nav';
 import { db } from '@/db';
 import { eq, or, sql } from 'drizzle-orm';
 import * as schema from '@/db/schema';
@@ -50,7 +51,44 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   
   const people = await getPeopleAtCompany(companyName);
-  if (people.length === 0) notFound();
+  
+  // Show helpful error if no client found
+  if (people.length === 0) {
+    return (
+      <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
+        <TopNav userRole={userRole} userEmail={session.user.email || ''} isAdmin={isAdmin} />
+        <div className="flex">
+          <aside className="w-64 min-h-screen" style={{ background: '#FFFFFF', borderRight: '1px solid #E8E4DD' }}>
+            <SidebarNav currentPath="/clients" userRole={userRole} />
+          </aside>
+          <main className="flex-1 p-8">
+            <div className="card p-8 text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(224, 122, 95, 0.15)' }}>
+                <svg className="w-8 h-8" style={{ color: '#E07A5F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold mb-2" style={{ color: '#2D2A26' }}>Company Not Found</h2>
+              <p className="mb-4" style={{ color: '#9B9B8F' }}>
+                No company named "{companyName}" exists in the database.
+              </p>
+              <p className="text-sm mb-6" style={{ color: '#9B9B8F' }}>
+                This could mean:
+              </p>
+              <ul className="text-sm text-left mb-6" style={{ color: '#9B9B8F', listStyle: 'disc', marginLeft: '2rem' }}>
+                <li>The company was deleted</li>
+                <li>The company was created without a company name (only a contact name)</li>
+                <li>You&apos;re using an incorrect URL</li>
+              </ul>
+              <Link href="/clients" className="btn-primary">
+                ← Back to Companies
+              </Link>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   // Get invoices and tasks
   let totalPending = 0;

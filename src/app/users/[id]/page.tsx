@@ -64,7 +64,7 @@ async function updateUser(id: string, formData: FormData) {
   await db.update(schema.users)
     .set(updateData)
     .where(eq(schema.users.id, id))
-    .run();
+    .execute();
 
   redirect('/users');
 }

@@ -80,12 +80,15 @@ export default async function TaskDetailPage({ params }: PageProps) {
                   <div>
                     <span className="text-xs" style={{ color: '#9B9B8F' }}>Status</span>
                     <div>
-                      <TaskStatusEdit 
-                        taskId={task.id} 
-                        currentStatus={task.status} 
-                        isAdmin={isAdmin}
-                        statusLockedAt={task.statusLockedAt}
-                      />
+<TaskStatusEdit 
+                          taskId={task.id} 
+                          currentStatus={task.status} 
+                          isAdmin={isAdmin}
+                          statusLockedAt={task.statusLockedAt}
+                          pendingStatus={(task as any).pendingStatus}
+                          pendingStatusRequestedBy={(task as any).pendingStatusRequestedBy}
+                          pendingStatusRequestedAt={(task as any).pendingStatusRequestedAt}
+                        />
                     </div>
                   </div>
                   

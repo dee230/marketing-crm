@@ -105,7 +105,7 @@ export async function POST(
       .update(schema.invoices)
       .set({ notes: currentNotes + reminderLog, updatedAt: new Date() })
       .where(eq(schema.invoices.id, id))
-      .run();
+      .execute();
 
     return NextResponse.json({ 
       success: true, 
@@ -163,7 +163,7 @@ export async function POST(
       .update(schema.invoices)
       .set({ notes: currentNotes + reminderLog, updatedAt: new Date() })
       .where(eq(schema.invoices.id, id))
-      .run();
+      .execute();
 
     return NextResponse.json({
       success: true,

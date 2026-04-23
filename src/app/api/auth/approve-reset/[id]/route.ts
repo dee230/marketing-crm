@@ -50,7 +50,7 @@ export async function POST(
       approvedBy: adminId,
     })
     .where(eq(schema.passwordResetRequests.id, id))
-    .run();
+    .execute();
 
   // Log the action
   await logAudit({
