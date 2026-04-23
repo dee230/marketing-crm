@@ -11,20 +11,29 @@ export default function SignInPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+        // Fix for Vercel
+        callbackUrl: '/dashboard',
+      });
 
-    if (result?.error) {
-      setError('Invalid email or password');
-    } else {
-      router.push('/dashboard');
+      if (result?.error) {
+        setError('Invalid email or password. Please try again.');
+      } else if (result?.ok) {
+        router.push('/dashboard');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } catch (err) {
+      setError('Unable to connect. Please check your internet connection.');
     }
   };
 
