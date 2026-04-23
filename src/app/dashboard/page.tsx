@@ -92,7 +92,7 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect('/sign-in');
 
-  const stats = getStats();
+  const stats = await getStats();
   const userRole = session.user.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
