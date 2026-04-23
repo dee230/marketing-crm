@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-22",
+  "libraries": {
+    "vercel-postgres": {
+      "files": [
+        {
+          "filename": "setup.md",
+          "topic": "setup and connection",
+          "tech_stack": "Next.js, Drizzle ORM",
+          "fetched": "2026-04-22T00:00:00Z",
+          "source": "Drizzle ORM Official Docs"
+        },
+        {
+          "filename": "migrations.md",
+          "topic": "migrations and environment variables",
+          "tech_stack": "Next.js, Drizzle ORM",
+          "fetched": "2026-04-22T00:00:00Z",
+          "source": "Vercel Docs + Drizzle ORM Docs"
+        }
+      ]
+    }
+  }
+}
