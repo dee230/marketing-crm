@@ -32,6 +32,14 @@ export function canViewInvoices(role: string | undefined): boolean {
 }
 
 /**
+ * Check if user can manage (edit/update) invoices
+ * Only admins and super_admins can manage invoices
+ */
+export function canManageInvoices(role: string | undefined): boolean {
+  return role === 'admin' || role === 'super_admin';
+}
+
+/**
  * Check if user can access accounting
  * Only admins and super_admins can access accounting
  */
