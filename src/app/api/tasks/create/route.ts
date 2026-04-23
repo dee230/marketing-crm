@@ -3,8 +3,6 @@ import { db } from '@/db';
 import * as schema from '@/db/schema';
 
 export async function POST(request: Request) {
-  console.log('API called: /api/tasks/create');
-  
   try {
     const formData = await request.formData();
     
@@ -23,30 +21,16 @@ export async function POST(request: Request) {
       );
     }
     
-    const now = new Date();
     const taskId = crypto.randomUUID();
+    const now = new Date();
     
-    console.log('Inserting task with all fields explicitly:', { taskId, title, priority, status });
-    
-    await db.insert(schema.tasks).values({
+    // Insert with only required fields - let defaults handle the rest
+    const result = await db.insert(schema.tasks).values({
       id: taskId,
-      title,
-      description: description || null,
-      assigneeId: assigneeId || null,
-      clientId: clientId || null,
+      title: title,
       status: (status || 'pending') as any,
       priority: (priority || 'medium') as any,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      completedAt: null,
-      statusLockedAt: null,
-      pendingStatus: null,
-      pendingStatusRequestedBy: null,
-      pendingStatusRequestedAt: null,
-      createdAt: now,
-      updatedAt: now,
     }).execute();
-    
-    console.log('Task created successfully');
     
     return NextResponse.json({
       success: true,
