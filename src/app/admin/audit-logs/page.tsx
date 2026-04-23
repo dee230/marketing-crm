@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { db } from '@/db';
 import { eq, desc, like, or } from 'drizzle-orm';
 import * as schema from '@/db/schema';
@@ -60,7 +59,7 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const params = await searchParams;

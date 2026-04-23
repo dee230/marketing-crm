@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { db } from '@/db';
 import { eq, desc, like, or, sql } from 'drizzle-orm';
 import * as schema from '@/db/schema';
@@ -91,7 +90,7 @@ function getLeadsByStatus(leads: any[]) {
 
 export default async function LeadsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const userRole = (session.user as any)?.role;

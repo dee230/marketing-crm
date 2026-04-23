@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { db } from '@/db';
@@ -31,7 +30,7 @@ async function getInvoice(id: string) {
 async function updateInvoiceStatus(invoiceId: string, status: string, paidDate: string | null, paymentReference: string | null, userId: string) {
   'use server';
   
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
   
   const userRole = (session.user as any)?.role;
@@ -55,7 +54,7 @@ async function updateInvoiceStatus(invoiceId: string, status: string, paidDate: 
 
 export default async function InvoiceDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const invoice = await getInvoice(id);

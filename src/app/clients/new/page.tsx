@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
@@ -12,7 +11,7 @@ export const dynamic = 'force-dynamic';
 async function createClient(formData: FormData) {
   'use server';
   
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
   
   const userId = (session.user as any)?.id;
@@ -54,7 +53,7 @@ async function createClient(formData: FormData) {
 }
 
 export default async function NewClientPage() {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const isAdmin = (session.user as any)?.role === 'admin';

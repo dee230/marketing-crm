@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
 import { db } from '@/db';
@@ -77,7 +76,7 @@ async function getPeopleAtCompany(companyName: string) {
 
 export default async function CompaniesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const userRole = (session.user as any)?.role;
