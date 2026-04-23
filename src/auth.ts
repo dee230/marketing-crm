@@ -42,18 +42,7 @@ export const authConfig: NextAuthOptions = {
       },
     }),
   ],
-  trustHost: true,
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
+  // CSRF disabled - needed for Vercel deployment
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
