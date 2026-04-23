@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
+import { db, sqlRaw } from '@/db';
 import * as schema from '@/db/schema';
 
 export const dynamic = 'force-dynamic';
@@ -24,20 +24,24 @@ export async function POST(request: Request) {
     }
     
     const taskId = crypto.randomUUID();
-    const now = new Date();
+    const now = new Date().toISOString();
     
-    await db.insert(schema.tasks).values({
-      id: taskId,
-      title,
-      description,
-      assigneeId,
-      clientId,
-      status: status as any,
-      priority: priority as any,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Use raw SQL for insert with proper timestamp handling
+    await sqlRaw`
+      INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at)
+      VALUES (
+        ${taskId},
+        ${title},
+        ${description},
+        ${assigneeId},
+        ${clientId},
+        ${status},
+        ${priority},
+        ${dueDate ? new Date(dueDate).toISOString() : null},
+        ${now},
+        ${now}
+      )
+    `;
     
     return NextResponse.json({
       success: true,

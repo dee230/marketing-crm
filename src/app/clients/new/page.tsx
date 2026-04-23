@@ -28,6 +28,8 @@ async function createClient(formData: FormData) {
 
   const clientId = crypto.randomUUID();
   
+  const now = new Date().toISOString();
+  
   await db.insert(schema.clients).values({
     id: clientId,
     name,
@@ -36,8 +38,8 @@ async function createClient(formData: FormData) {
     phone: phone || null,
     status: status as any,
     notes: notes || null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
   });
 
   // Log audit

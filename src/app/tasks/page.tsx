@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
-import { db } from '@/db';
-import { eq, desc, like, or, sql } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { TasksFilters } from './tasks-filters';
 import { Pagination } from '@/components/pagination';
 import { SearchInput } from '@/components/search-input';
@@ -21,64 +19,50 @@ interface PageProps {
 async function getTasks(page: number, search?: string) {
   const offset = (page - 1) * ITEMS_PER_PAGE;
   
-  // Build where clause for search
-  let whereClause;
-  if (search) {
-    const searchPattern = `%${search}%`;
-    whereClause = or(
-      like(schema.tasks.title, searchPattern),
-      like(schema.tasks.description, searchPattern)
-    );
-  }
-  
   let tasks: any[] = [];
   let totalCount = 0;
   
   try {
-    tasks = await db.select()
-      .from(schema.tasks)
-      .where(whereClause)
-      .orderBy(schema.tasks.dueDate)
-      .limit(ITEMS_PER_PAGE)
-      .offset(offset);
+    // Use raw SQL for select
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const result = await sqlRaw`
+        SELECT t.*, u.name as assignee_name, c.name as client_name
+        FROM tasks t
+        LEFT JOIN users u ON t.assignee_id = u.id
+        LEFT JOIN clients c ON t.client_id = c.id
+        WHERE t.title ILIKE ${searchPattern} OR t.description ILIKE ${searchPattern}
+        ORDER BY t.due_date NULLS LAST
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      tasks = result;
+      
+      const countResult = await sqlRaw`
+        SELECT COUNT(*) as count FROM tasks 
+        WHERE title ILIKE ${searchPattern} OR description ILIKE ${searchPattern}
+      `;
+      totalCount = countResult[0]?.count || 0;
+    } else {
+      const result = await sqlRaw`
+        SELECT t.*, u.name as assignee_name, c.name as client_name
+        FROM tasks t
+        LEFT JOIN users u ON t.assignee_id = u.id
+        LEFT JOIN clients c ON t.client_id = c.id
+        ORDER BY t.due_date NULLS LAST
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      tasks = result;
+      
+      const countResult = await sqlRaw`SELECT COUNT(*) as count FROM tasks`;
+      totalCount = countResult[0]?.count || 0;
+    }
   } catch (e) {
     console.error('Error fetching tasks:', e);
   }
   
-  try {
-    const countResult = await db.select({ count: sql<number>`count(*)` })
-      .from(schema.tasks)
-      .where(whereClause);
-    totalCount = countResult[0]?.count || 0;
-  } catch (e) {
-    console.error('Error counting tasks:', e);
-  }
-  
-  let users: any[] = [];
-  let clients: any[] = [];
-  
-  try {
-    const result = await Promise.all([
-      db.select().from(schema.users),
-      db.select().from(schema.clients),
-    ]);
-    users = result[0] || [];
-    clients = result[1] || [];
-  } catch (e) {
-    console.error('Error fetching users/clients:', e);
-  }
-  
-  const userMap = new Map(users.map((u: any) => [u.id, u.name]));
-  const clientMap = new Map(clients.map((c: any) => [c.id, c.name]));
-  
-  return {
-    tasks: tasks.map(task => ({
-      ...task,
-      assigneeName: task.assigneeId ? userMap.get(task.assigneeId) : null,
-      clientName: task.clientId ? clientMap.get(task.clientId) : null,
-    })),
-    totalCount,
-  };
+  return { tasks, totalCount };
 }
 
 export default async function TasksPage({ searchParams }: PageProps) {
@@ -95,7 +79,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
   const { tasks, totalCount } = await getTasks(currentPage, searchQuery);
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-return (
+  return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
       {/* Top Navigation */}
       <TopNav userRole={userRole} userEmail={session.user.email || ''} isAdmin={isAdmin} />

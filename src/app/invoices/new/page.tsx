@@ -32,6 +32,7 @@ async function createInvoice(formData: FormData) {
   const invoiceNumber = `INV-${String(invoiceCount[0]?.count || 0 + 1).padStart(4, '0')}`;
 
   const invoiceId = crypto.randomUUID();
+  const now = new Date().toISOString();
   
   await db.insert(schema.invoices).values({
     id: invoiceId,
@@ -39,12 +40,12 @@ async function createInvoice(formData: FormData) {
     clientId,
     amount,
     description: description || null,
-    dueDate: new Date(dueDate),
+    dueDate: new Date(dueDate).toISOString(),
     status: status as any,
     notes: notes || null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }).execute();
+    createdAt: now,
+    updatedAt: now,
+  });
 
   // Log audit
   await logAudit({
@@ -53,7 +54,7 @@ async function createInvoice(formData: FormData) {
     entityType: 'invoice',
     entityId: invoiceId,
     details: { invoiceNumber, amount, status },
-  }).execute();
+  });
 
   redirect('/invoices');
 }
@@ -66,7 +67,7 @@ export default async function NewInvoicePage() {
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   if (!isAdmin) redirect('/dashboard');
 
-  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active')).execute();
+  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active'));
 
   return (
     <div className="animate-fade-in">

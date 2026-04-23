@@ -27,6 +27,7 @@ async function createLead(formData: FormData) {
   const notes = formData.get('notes') as string;
 
   const leadId = crypto.randomUUID();
+  const now = new Date().toISOString();
   
   await db.insert(schema.leads).values({
     id: leadId,
@@ -38,9 +39,9 @@ async function createLead(formData: FormData) {
     status: status as any,
     clientId: clientId || null,
     notes: notes || null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }).execute();
+    createdAt: now,
+    updatedAt: now,
+  });
 
   // Log audit
   await logAudit({
@@ -61,7 +62,7 @@ export default async function NewLeadPage() {
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active')).execute();
+  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active'));
 
   return (
     <div className="animate-fade-in">

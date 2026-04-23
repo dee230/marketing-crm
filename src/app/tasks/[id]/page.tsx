@@ -4,9 +4,7 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { canViewTasks, canManageTasks } from '@/lib/roles';
 import { TaskStatusEdit } from './task-status-edit';
 
@@ -17,20 +15,20 @@ interface PageProps {
 }
 
 async function getTask(id: string) {
-  const [task] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).execute();
-  return task || null;
+  const result = await sqlRaw`SELECT * FROM tasks WHERE id = ${id}`;
+  return result[0] || null;
 }
 
 async function getAssignee(userId: string | null) {
   if (!userId) return null;
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).execute();
-  return user || null;
+  const result = await sqlRaw`SELECT * FROM users WHERE id = ${userId}`;
+  return result[0] || null;
 }
 
 async function getClient(clientId: string | null) {
   if (!clientId) return null;
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).execute();
-  return client || null;
+  const result = await sqlRaw`SELECT * FROM clients WHERE id = ${clientId}`;
+  return result[0] || null;
 }
 
 export default async function TaskDetailPage({ params }: PageProps) {

@@ -33,14 +33,14 @@ async function createUser(formData: FormData) {
   // Check if email already exists
   const existingUser = await db.select()
     .from(schema.users)
-    .where(eq(schema.users.email, email))
-    .execute();
+    .where(eq(schema.users.email, email));
 
   if (existingUser.length > 0) {
     redirect('/users/new');
   }
 
   const newUserId = crypto.randomUUID();
+  const now = new Date().toISOString();
   
   await db.insert(schema.users).values({
     id: newUserId,
@@ -49,9 +49,9 @@ async function createUser(formData: FormData) {
     password: password || null,
     role: finalRole as 'super_admin' | 'admin' | 'member',
     emailVerified: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }).execute();
+    createdAt: now,
+    updatedAt: now,
+  });
 
   // Log audit
   await logAudit({
@@ -60,7 +60,7 @@ async function createUser(formData: FormData) {
     entityType: 'user',
     entityId: newUserId,
     details: { name, email, role: finalRole },
-  }).execute();
+  });
 
   redirect('/users');
 }

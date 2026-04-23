@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
-import { db } from '@/db';
+import { db, sqlRaw } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { DashboardCalendar } from './calendar';
@@ -22,49 +22,52 @@ async function getStats() {
   let recentTasks: any[] = [];
 
   try {
-    allClients = await db.select().from(schema.clients).execute();
+    allClients = await db.select().from(schema.clients);
   } catch (e) {
     console.error('Error fetching clients:', e);
   }
 
   try {
-    allLeads = await db.select().from(schema.leads).execute();
+    allLeads = await db.select().from(schema.leads);
   } catch (e) {
     console.error('Error fetching leads:', e);
   }
 
   try {
-    allInvoices = await db.select().from(schema.invoices).execute();
+    allInvoices = await db.select().from(schema.invoices);
   } catch (e) {
     console.error('Error fetching invoices:', e);
   }
 
   try {
-    allTasksFull = await db.select().from(schema.tasks).execute();
+    // Use raw SQL for tasks
+    allTasksFull = await sqlRaw`SELECT * FROM tasks ORDER BY created_at DESC`;
   } catch (e) {
     console.error('Error fetching tasks:', e);
   }
 
   try {
-    pendingTasksList = await db.select().from(schema.tasks).where(eq(schema.tasks.status, 'pending')).limit(5).execute();
+    // Use raw SQL for pending tasks
+    pendingTasksList = await sqlRaw`SELECT * FROM tasks WHERE status = 'pending' ORDER BY due_date NULLS LAST LIMIT 5`;
   } catch (e) {
     console.error('Error fetching pending tasks:', e);
   }
 
   try {
-    recentLeads = await db.select().from(schema.leads).limit(5).execute();
+    recentLeads = await db.select().from(schema.leads).limit(5);
   } catch (e) {
     console.error('Error fetching recent leads:', e);
   }
 
   try {
-    recentInvoices = await db.select().from(schema.invoices).limit(5).execute();
+    recentInvoices = await db.select().from(schema.invoices).limit(5);
   } catch (e) {
     console.error('Error fetching recent invoices:', e);
   }
 
   try {
-    recentTasks = await db.select().from(schema.tasks).limit(5).execute();
+    // Use raw SQL for recent tasks
+    recentTasks = await sqlRaw`SELECT * FROM tasks ORDER BY created_at DESC LIMIT 5`;
   } catch (e) {
     console.error('Error fetching recent tasks:', e);
   }

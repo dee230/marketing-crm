@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
+import { db, sqlRaw } from '@/db';
 import * as schema from '@/db/schema';
 
 export const dynamic = 'force-dynamic';
@@ -24,46 +24,25 @@ export async function GET() {
 }
 
 export async function POST() {
-  console.log('=== DEBUG: Starting task insert test ===');
+  console.log('=== DEBUG: Testing raw SQL for tasks ===');
   
   try {
-    // Check what db is
-    console.log('db type:', typeof db);
-    console.log('db keys:', Object.keys(db).slice(0, 10));
-    console.log('db.insert type:', typeof db.insert);
-    console.log('schema.tasks:', schema.tasks);
-    
-    // Try a simple select first
-    console.log('=== Testing simple select ===');
-    const tasksResult = await db.select().from(schema.tasks).limit(1);
-    console.log('Select result count:', tasksResult.length);
-    
-    // Now try insert with the simplest possible values
-    console.log('=== Testing minimal insert ===');
-    const taskId = 'debug-test-' + Date.now();
-    await db.insert(schema.tasks).values({
-      id: taskId,
-      title: 'Debug Test',
-      status: 'pending',
-      priority: 'medium',
-    });
-    console.log('Insert without .execute() worked');
+    // Use raw SQL for select
+    const tasks = await sqlRaw`SELECT * FROM tasks LIMIT 5`;
+    console.log('Tasks found:', tasks.length);
     
     return NextResponse.json({
       success: true,
-      message: 'Task insert test completed',
-      taskId,
-      tasksCount: tasksResult.length,
+      message: 'Raw SQL tasks query completed',
+      tasksCount: tasks.length,
     });
   } catch (error: any) {
     console.error('=== ERROR ===');
-    console.error('Error:', error);
-    console.error('Error message:', error.message);
+    console.error('Error:', error.message);
     
     return NextResponse.json({
       success: false,
       error: error.message,
-      errorType: typeof error,
     }, { status: 500 });
   }
 }

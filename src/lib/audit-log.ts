@@ -52,7 +52,7 @@ export async function logAudit(params: AuditLogParams) {
       details: params.details ? JSON.stringify(params.details) : null,
       ipAddress: params.ipAddress || null,
       userAgent: params.userAgent || null,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
   } catch (error) {
     // Never throw - audit logging should never break the main operation

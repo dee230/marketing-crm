@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
@@ -29,25 +27,27 @@ async function createTask(formData: FormData) {
   const dueDateStr = formData.get('dueDate') as string;
 
   const taskId = crypto.randomUUID();
+  const now = new Date().toISOString();
   
   // Parse due date if provided
-  let dueDate = null;
-  if (dueDateStr) {
-    dueDate = new Date(dueDateStr);
-  }
+  const dueDate = dueDateStr ? new Date(dueDateStr).toISOString() : null;
 
-  await db.insert(schema.tasks).values({
-    id: taskId,
-    title,
-    description: description || null,
-    assigneeId: assigneeId || null,
-    clientId: clientId || null,
-    priority: priority as any,
-    status: status as any,
-    dueDate: dueDate,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+  // Use raw SQL for insert with proper timestamp handling
+  await sqlRaw`
+    INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at)
+    VALUES (
+      ${taskId},
+      ${title},
+      ${description || null},
+      ${assigneeId || null},
+      ${clientId || null},
+      ${status},
+      ${priority},
+      ${dueDate},
+      ${now},
+      ${now}
+    )
+  `;
 
   // Log audit
   await logAudit({
@@ -66,13 +66,13 @@ async function getUsersAndClients() {
   let clients: any[] = [];
   
   try {
-    users = await db.select().from(schema.users);
+    users = await sqlRaw`SELECT id, name FROM users ORDER BY name`;
   } catch (e) {
     console.error('Error fetching users:', e);
   }
   
   try {
-    clients = await db.select().from(schema.clients);
+    clients = await sqlRaw`SELECT id, name, company FROM clients ORDER BY name`;
   } catch (e) {
     console.error('Error fetching clients:', e);
   }
