@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
-import { db } from '@/db';
-import { inArray } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { getSession } from '@/lib/session';
+import { sqlRaw } from '@/db';
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,8 +20,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No IDs provided' }, { status: 400 });
   }
   
-  // Delete the tasks
-  await db.delete(schema.tasks).where(inArray(schema.tasks.id, ids)).execute();
+  // Delete the tasks using raw SQL
+  await sqlRaw`DELETE FROM tasks WHERE id = ANY(${ids})`;
   
   return NextResponse.json({ success: true, deletedCount: ids.length });
 }

@@ -3,16 +3,14 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
-import { db } from '@/db';
-import { eq, desc } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { canViewUsers, isSuperAdmin } from '@/lib/roles';
 import { DeleteUserButton } from './delete-button';
 
 export const dynamic = 'force-dynamic';
 
 async function getUsers() {
-  return db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).execute();
+  return sqlRaw`SELECT * FROM users ORDER BY created_at DESC`;
 }
 
 export default async function UsersPage() {

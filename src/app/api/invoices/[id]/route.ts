@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { getSession } from '@/lib/session';
+import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
-import { canManageInvoices } from '@/lib/roles';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const userRole = (session.user as any)?.role;
-  if (!canManageInvoices(userRole)) {
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  if (!isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -26,37 +23,48 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const body = await request.json();
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
+  const userId = (session.user as any)?.id;
+  const now = new Date().toISOString();
   
-  // Get current invoice
-  const [currentInvoice] = await db.select().from(schema.invoices).where(eq(schema.invoices.id, id)).limit(1);
+  // Get current invoice using raw SQL
+  const invoices = await sqlRaw`SELECT * FROM invoices WHERE id = ${id} LIMIT 1`;
+  const currentInvoice = invoices[0];
   
   if (!currentInvoice) {
     return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
   }
   
-  const updates: any = { ...body };
-  updates.updatedAt = new Date();
+  // Build update query
+  const updates: string[] = [];
+  
+  if (body.status !== undefined) updates.push(`status = '${body.status}'`);
+  if (body.description !== undefined) updates.push(`description = ${body.description ? `'${body.description.replace(/'/g, "''")}'` : 'NULL'}`);
+  if (body.notes !== undefined) updates.push(`notes = ${body.notes ? `'${body.notes.replace(/'/g, "''")}'` : 'NULL'}`);
+  if (body.amount !== undefined) updates.push(`amount = ${body.amount}`);
   
   // If marking as paid, set paidDate
   if (body.status === 'paid' && currentInvoice.status !== 'paid') {
-    updates.paidDate = body.paidDate ? new Date(body.paidDate) : new Date();
+    const paidDate = body.paidDate ? new Date(body.paidDate).toISOString() : now;
+    updates.push(`paid_date = '${paidDate}'`);
     if (body.paymentReference) {
-      updates.paymentReference = body.paymentReference;
+      updates.push(`payment_reference = '${body.paymentReference.replace(/'/g, "''")}'`);
     }
   }
   
   // If reverting from paid, clear paidDate
   if (body.status !== 'paid' && currentInvoice.status === 'paid') {
-    updates.paidDate = null;
-    updates.paymentReference = null;
+    updates.push(`paid_date = NULL`);
+    updates.push(`payment_reference = NULL`);
   }
-
-  await db.update(schema.invoices).set(updates).where(eq(schema.invoices.id, id)).execute();
+  
+  updates.push(`updated_at = '${now}'`);
+  
+  await sqlRaw`UPDATE invoices SET ${sqlRaw(updates.join(', '))} WHERE id = ${id}`;
   
   // Log status changes
   if (body.status && body.status !== currentInvoice.status) {
     await logAudit({
-      userId: session.user.id as string,
+      userId,
       action: 'invoice_status_changed',
       entityType: 'invoice',
       entityId: id,
@@ -65,7 +73,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     });
   } else {
     await logAudit({
-      userId: session.user.id as string,
+      userId,
       action: 'invoice_updated',
       entityType: 'invoice',
       entityId: id,
@@ -78,16 +86,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
+  const userId = (session?.user as any)?.id;
   const { id } = await params;
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
   
-  await db.delete(schema.invoices).where(eq(schema.invoices.id, id)).execute();
+  // Check if user is admin
+  const userRole = (session?.user as any)?.role;
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  
+  await sqlRaw`DELETE FROM invoices WHERE id = ${id}`;
   
   // Log the action
   await logAudit({
-    userId: session?.user?.id as string,
+    userId,
     action: 'invoice_deleted',
     entityType: 'invoice',
     entityId: id,

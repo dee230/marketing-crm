@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { getSession } from '@/lib/session';
+import { sqlRaw } from '@/db';
 import { isSuperAdmin } from '@/lib/roles';
 import { logAudit } from '@/lib/audit-log';
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
-    await db.delete(schema.users).where(eq(schema.users.id, userId)).execute();
+    await sqlRaw`DELETE FROM users WHERE id = ${userId}`;
     
     // Log the action
     await logAudit({

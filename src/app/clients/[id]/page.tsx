@@ -4,9 +4,7 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { db } from '@/db';
-import { eq, or, sql } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { CompanyNotesSection } from './notes-section';
 import { PeopleList } from './people-list';
 import { ResourcesSection } from './resources-section';
@@ -23,21 +21,34 @@ function decodeCompanyName(name: string): string {
   return decodeURIComponent(name);
 }
 
-function getPeopleAtCompany(companyName: string) {
-  return db.select().from(schema.clients).where(
-    or(
-      eq(schema.clients.company, companyName),
-      sql`${schema.clients.company} IS NULL AND ${schema.clients.name} = ${companyName}`
-    )
-  ).execute();
+async function getPeopleAtCompany(companyName: string) {
+  try {
+    return await sqlRaw`
+      SELECT * FROM clients 
+      WHERE company = ${companyName} OR (company IS NULL AND name = ${companyName})
+    `;
+  } catch (e) {
+    console.error('Error fetching people:', e);
+    return [];
+  }
 }
 
-function getPersonInvoices(personId: string) {
-  return db.select().from(schema.invoices).where(eq(schema.invoices.clientId, personId)).execute();
+async function getPersonInvoices(personId: string) {
+  try {
+    return await sqlRaw`SELECT * FROM invoices WHERE client_id = ${personId}`;
+  } catch (e) {
+    console.error('Error fetching invoices:', e);
+    return [];
+  }
 }
 
-function getPersonTasks(personId: string) {
-  return db.select().from(schema.tasks).where(eq(schema.tasks.clientId, personId)).execute();
+async function getPersonTasks(personId: string) {
+  try {
+    return await sqlRaw`SELECT * FROM tasks WHERE client_id = ${personId}`;
+  } catch (e) {
+    console.error('Error fetching tasks:', e);
+    return [];
+  }
 }
 
 export default async function CompanyDetailPage({ params }: PageProps) {

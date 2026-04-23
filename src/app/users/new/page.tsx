@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { canViewUsers, canManageUserRoles } from '@/lib/roles';
 import { logAudit } from '@/lib/audit-log';
 import { TopNav } from '@/components/top-nav';
@@ -31,9 +29,7 @@ async function createUser(formData: FormData) {
   const finalRole = canChangeRoles ? role : 'member';
 
   // Check if email already exists
-  const existingUser = await db.select()
-    .from(schema.users)
-    .where(eq(schema.users.email, email));
+  const existingUser = await sqlRaw`SELECT * FROM users WHERE email = ${email} LIMIT 1`;
 
   if (existingUser.length > 0) {
     redirect('/users/new');
@@ -42,16 +38,10 @@ async function createUser(formData: FormData) {
   const newUserId = crypto.randomUUID();
   const now = new Date().toISOString();
   
-  await db.insert(schema.users).values({
-    id: newUserId,
-    name,
-    email,
-    password: password || null,
-    role: finalRole as 'super_admin' | 'admin' | 'member',
-    emailVerified: 0,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await sqlRaw`
+    INSERT INTO users (id, name, email, password, role, email_verified, created_at, updated_at)
+    VALUES (${newUserId}, ${name}, ${email}, ${password || null}, ${finalRole}, 0, ${now}, ${now})
+  `;
 
   // Log audit
   await logAudit({

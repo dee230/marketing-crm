@@ -4,9 +4,7 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { EditLeadForm } from './edit-lead';
 
 export const dynamic = 'force-dynamic';
@@ -16,14 +14,14 @@ interface PageProps {
 }
 
 async function getLead(id: string) {
-  const [lead] = await db.select().from(schema.leads).where(eq(schema.leads.id, id)).execute();
-  return lead || null;
+  const result = await sqlRaw`SELECT * FROM leads WHERE id = ${id} LIMIT 1`;
+  return result[0] || null;
 }
 
 async function getClient(clientId: string | null) {
   if (!clientId) return null;
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, clientId)).execute();
-  return client || null;
+  const result = await sqlRaw`SELECT * FROM clients WHERE id = ${clientId} LIMIT 1`;
+  return result[0] || null;
 }
 
 export default async function LeadDetailPage({ params }: PageProps) {

@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { TopNav } from '@/components/top-nav';
 import { logAudit } from '@/lib/audit-log';
 
@@ -28,24 +26,17 @@ async function createInvoice(formData: FormData) {
   const notes = formData.get('notes') as string;
 
   // Generate invoice number
-  const invoiceCount = await db.select({ count: schema.invoices.id }).from(schema.invoices);
-  const invoiceNumber = `INV-${String(invoiceCount[0]?.count || 0 + 1).padStart(4, '0')}`;
+  const invoiceCountResult = await sqlRaw`SELECT COUNT(*) as count FROM invoices`;
+  const invoiceCount = invoiceCountResult[0]?.count || 0;
+  const invoiceNumber = `INV-${String(invoiceCount + 1).padStart(4, '0')}`;
 
   const invoiceId = crypto.randomUUID();
   const now = new Date().toISOString();
   
-  await db.insert(schema.invoices).values({
-    id: invoiceId,
-    invoiceNumber,
-    clientId,
-    amount,
-    description: description || null,
-    dueDate: new Date(dueDate).toISOString(),
-    status: status as any,
-    notes: notes || null,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await sqlRaw`
+    INSERT INTO invoices (id, invoice_number, client_id, amount, description, due_date, status, notes, created_at, updated_at)
+    VALUES (${invoiceId}, ${invoiceNumber}, ${clientId}, ${amount}, ${description || null}, ${new Date(dueDate).toISOString()}, ${status}, ${notes || null}, ${now}, ${now})
+  `;
 
   // Log audit
   await logAudit({
@@ -67,7 +58,7 @@ export default async function NewInvoicePage() {
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   if (!isAdmin) redirect('/dashboard');
 
-  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active'));
+  const clients = await sqlRaw`SELECT id, name, company FROM clients WHERE status = 'active' ORDER BY name`;
 
   return (
     <div className="animate-fade-in">

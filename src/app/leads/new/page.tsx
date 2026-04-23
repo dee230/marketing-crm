@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
@@ -29,19 +27,10 @@ async function createLead(formData: FormData) {
   const leadId = crypto.randomUUID();
   const now = new Date().toISOString();
   
-  await db.insert(schema.leads).values({
-    id: leadId,
-    name,
-    email: email || null,
-    phone: phone || null,
-    company: company || null,
-    source: source as any,
-    status: status as any,
-    clientId: clientId || null,
-    notes: notes || null,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await sqlRaw`
+    INSERT INTO leads (id, name, email, phone, company, source, status, client_id, notes, created_at, updated_at)
+    VALUES (${leadId}, ${name}, ${email || null}, ${phone || null}, ${company || null}, ${source}, ${status}, ${clientId || null}, ${notes || null}, ${now}, ${now})
+  `;
 
   // Log audit
   await logAudit({
@@ -62,7 +51,7 @@ export default async function NewLeadPage() {
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  const clients = await db.select().from(schema.clients).where(eq(schema.clients.status, 'active'));
+  const clients = await sqlRaw`SELECT id, name, company FROM clients WHERE status = 'active' ORDER BY name`;
 
   return (
     <div className="animate-fade-in">

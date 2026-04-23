@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { db } from '@/db';
-import { eq, desc, and, gte, lte } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,25 +14,25 @@ async function getReportData() {
   let allTasks: any[] = [];
 
   try {
-    allInvoices = await db.select().from(schema.invoices).execute();
+    allInvoices = await sqlRaw`SELECT * FROM invoices ORDER BY created_at DESC`;
   } catch (e) {
     console.error('Error fetching invoices:', e);
   }
 
   try {
-    allClients = await db.select().from(schema.clients).execute();
+    allClients = await sqlRaw`SELECT * FROM clients ORDER BY created_at DESC`;
   } catch (e) {
     console.error('Error fetching clients:', e);
   }
 
   try {
-    allLeads = await db.select().from(schema.leads).execute();
+    allLeads = await sqlRaw`SELECT * FROM leads ORDER BY created_at DESC`;
   } catch (e) {
     console.error('Error fetching leads:', e);
   }
 
   try {
-    allTasks = await db.select().from(schema.tasks).execute();
+    allTasks = await sqlRaw`SELECT * FROM tasks ORDER BY created_at DESC`;
   } catch (e) {
     console.error('Error fetching tasks:', e);
   }

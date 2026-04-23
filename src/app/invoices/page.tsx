@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
-import { db } from '@/db';
-import { eq, desc } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { canViewInvoices } from '@/lib/roles';
 import { InvoicesFilters } from './invoices-filters';
 import { InvoiceCalendar } from './invoice-calendar';
@@ -13,22 +11,19 @@ import { InvoiceCalendar } from './invoice-calendar';
 export const dynamic = 'force-dynamic';
 
 async function markOverdueInvoices() {
-  const allInvoices = await db.select().from(schema.invoices).execute();
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const fiveDaysAgoStr = fiveDaysAgo.toISOString();
   
-  for (const invoice of allInvoices) {
-    // Only check invoices that are not paid, cancelled, or already overdue
-    if (invoice.status !== 'sent' && invoice.status !== 'draft') continue;
-    if (!invoice.dueDate) continue;
-    
-    const dueDate = new Date(invoice.dueDate);
-    if (dueDate < fiveDaysAgo) {
-      await db.update(schema.invoices)
-        .set({ status: 'overdue', updatedAt: now })
-        .where(eq(schema.invoices.id, invoice.id))
-        .execute();
-    }
+  try {
+    // Mark overdue invoices
+    await sqlRaw`
+      UPDATE invoices SET status = 'overdue', updated_at = ${now.toISOString()}
+      WHERE status IN ('sent', 'draft')
+      AND due_date < ${fiveDaysAgoStr}
+    `;
+  } catch (e) {
+    console.error('Error marking overdue invoices:', e);
   }
 }
 
@@ -36,13 +31,22 @@ async function getInvoices() {
   // Auto-mark overdue invoices
   await markOverdueInvoices();
   
-  const invoices = await db.select().from(schema.invoices).orderBy(desc(schema.invoices.createdAt)).execute();
-  const clients = await db.select().from(schema.clients).execute();
-  const clientMap = new Map(clients.map(c => [c.id, c]));
+  let invoices: any[] = [];
+  try {
+    invoices = await sqlRaw`
+      SELECT i.*, c.name as client_name, c.company as client_company
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      ORDER BY i.created_at DESC
+    `;
+  } catch (e) {
+    console.error('Error fetching invoices:', e);
+  }
   
   return invoices.map(invoice => ({
     ...invoice,
-    client: clientMap.get(invoice.clientId),
+    client: invoice,
+    clientName: invoice.client_name || null,
   }));
 }
 

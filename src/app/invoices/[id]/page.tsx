@@ -4,9 +4,7 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { canViewInvoices, canManageInvoices } from '@/lib/roles';
 import type { InvoiceData } from '@/lib/invoice-pdf';
 import { DownloadPDFButton } from './download-button';
@@ -19,10 +17,12 @@ interface PageProps {
 }
 
 async function getInvoice(id: string) {
-  const [invoice] = await db.select().from(schema.invoices).where(eq(schema.invoices.id, id)).execute();
+  const result = await sqlRaw`SELECT * FROM invoices WHERE id = ${id} LIMIT 1`;
+  const invoice = result[0];
   if (!invoice) return null;
   
-  const [client] = await db.select().from(schema.clients).where(eq(schema.clients.id, invoice.clientId)).execute();
+  const clientResult = await sqlRaw`SELECT * FROM clients WHERE id = ${invoice.client_id} LIMIT 1`;
+  const client = clientResult[0];
   
   return { ...invoice, client };
 }
@@ -38,18 +38,22 @@ async function updateInvoiceStatus(invoiceId: string, status: string, paidDate: 
     throw new Error('Not authorized');
   }
 
-  const updates: any = { status, updatedAt: new Date() };
+  const now = new Date().toISOString();
+  let query = `UPDATE invoices SET status = '${status}', updated_at = '${now}'`;
   
   // If marking as paid, set paidDate
   if (status === 'paid' && paidDate) {
-    updates.paidDate = new Date(paidDate);
-    updates.paymentReference = paymentReference;
+    query += `, paid_date = '${new Date(paidDate).toISOString()}'`;
+    if (paymentReference) {
+      query += `, payment_reference = '${paymentReference}'`;
+    }
   } else if (status !== 'paid') {
-    updates.paidDate = null;
-    updates.paymentReference = null;
+    query += `, paid_date = NULL, payment_reference = NULL`;
   }
-
-  await db.update(schema.invoices).set(updates).where(eq(schema.invoices.id, invoiceId)).execute();
+  
+  query += ` WHERE id = '${invoiceId}'`;
+  
+  await sqlRaw`${sqlRaw(query)}`;
 }
 
 export default async function InvoiceDetailPage({ params }: PageProps) {
@@ -67,21 +71,21 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   const canManage = canManageInvoices(userRole);
 
   const invoiceData: InvoiceData = {
-    invoiceNumber: invoice.invoiceNumber,
+    invoiceNumber: (invoice as any).invoice_number || invoice.invoiceNumber,
     client: {
-      name: invoice.client?.name || 'N/A',
-      company: invoice.client?.company,
-      email: invoice.client?.email,
-      phone: invoice.client?.phone,
+      name: invoice.client?.name || (invoice as any).client_name || 'N/A',
+      company: (invoice as any).client?.company || (invoice as any).client_company,
+      email: invoice.client?.email || (invoice as any).client_email,
+      phone: invoice.client?.phone || (invoice as any).client_phone,
     },
     amount: invoice.amount,
     status: invoice.status,
-    dueDate: invoice.dueDate,
-    paidDate: invoice.paidDate,
-    description: invoice.description,
-    items: invoice.items ? JSON.parse(invoice.items) : null,
-    notes: invoice.notes,
-    createdAt: invoice.createdAt,
+    dueDate: (invoice as any).due_date || invoice.dueDate,
+    paidDate: (invoice as any).paid_date || invoice.paidDate,
+    description: invoice.description || (invoice as any).description,
+    items: invoice.items ? JSON.parse(invoice.items as string) : null,
+    notes: invoice.notes || (invoice as any).notes,
+    createdAt: (invoice as any).created_at || invoice.createdAt,
   };
 
   return (

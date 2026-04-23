@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { db } from '@/db';
-import { eq, desc, like, or } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { TopNav } from '@/components/top-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { canViewUsers } from '@/lib/roles';
@@ -18,39 +16,47 @@ interface SearchParams {
 async function getAuditLogs(searchParams: SearchParams) {
   const { search, entityType, action } = searchParams;
   
-  let query = db.select().from(schema.auditLogs);
+  let logs: any[] = [];
+  let users: any[] = [];
   
-  // Build filters
-  const filters = [];
-  if (entityType && entityType !== 'all') {
-    filters.push(eq(schema.auditLogs.entityType, entityType));
-  }
-  if (action && action !== 'all') {
-    filters.push(eq(schema.auditLogs.action, action as any));
-  }
-  if (search) {
-    // Search by entity ID or user ID
-    filters.push(like(schema.auditLogs.entityId, `%${search}%`));
+  try {
+    // Build WHERE clause
+    const conditions: string[] = [];
+    if (entityType && entityType !== 'all') {
+      conditions.push(`entity_type = '${entityType}'`);
+    }
+    if (action && action !== 'all') {
+      conditions.push(`action = '${action}'`);
+    }
+    if (search) {
+      conditions.push(`(entity_id LIKE '%${search}%' OR user_id LIKE '%${search}%')`);
+    }
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    logs = await sqlRaw`
+      SELECT * FROM audit_logs 
+      ${sqlRaw(whereClause || '')}
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `;
+    
+    // Get user details
+    if (logs.length > 0) {
+      const userIds = [...new Set(logs.map(l => l.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        users = await sqlRaw`SELECT * FROM users WHERE id = ANY(${userIds})`;
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching audit logs:', e);
   }
   
-  if (filters.length > 0) {
-    query = query.where(or(...filters)) as typeof query;
-  }
-  
-  const logs = await query.orderBy(desc(schema.auditLogs.createdAt)).limit(100).execute();
-  
-  // Get user details for all user IDs in logs
-  const userIds = [...new Set(logs.map(l => l.userId).filter(Boolean))] as string[];
-  let userMap = new Map();
-  
-  if (userIds.length > 0) {
-    const users = await db.select().from(schema.users).execute();
-    userMap = new Map(users.map(u => [u.id, u]));
-  }
+  const userMap = new Map(users.map(u => [u.id, u]));
   
   return logs.map(log => ({
     ...log,
-    user: log.userId ? userMap.get(log.userId) : null,
+    user: log.user_id ? userMap.get(log.user_id) : null,
   }));
 }
 

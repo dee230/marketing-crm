@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import { db } from '@/db';
-import { eq, desc, like, or, sql } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { SignOutButton } from '@/components/sign-out-button';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
@@ -16,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 const ITEMS_PER_PAGE = 10;
 
-export type Lead = Awaited<ReturnType<typeof getLeads>>[number];
+export type Lead = any;
 
 interface PageProps {
   searchParams: Promise<{ page?: string; search?: string }>;
@@ -25,52 +23,54 @@ interface PageProps {
 async function getLeads(page: number, search?: string) {
   const offset = (page - 1) * ITEMS_PER_PAGE;
   
-  // Build where clause for search
-  let whereClause;
-  if (search) {
-    const searchPattern = `%${search}%`;
-    whereClause = or(
-      like(schema.leads.name, searchPattern),
-      like(schema.leads.email, searchPattern),
-      like(schema.leads.company, searchPattern)
-    );
+  let leads: any[] = [];
+  let totalCount = 0;
+  
+  try {
+    if (search) {
+      const searchPattern = `%${search}%`;
+      leads = await sqlRaw`
+        SELECT l.*, c.name as client_name
+        FROM leads l
+        LEFT JOIN clients c ON l.client_id = c.id
+        WHERE l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern} OR l.company ILIKE ${searchPattern}
+        ORDER BY l.created_at DESC
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      
+      const countResult = await sqlRaw`
+        SELECT COUNT(*) as count FROM leads 
+        WHERE name ILIKE ${searchPattern} OR email ILIKE ${searchPattern} OR company ILIKE ${searchPattern}
+      `;
+      totalCount = countResult[0]?.count || 0;
+    } else {
+      leads = await sqlRaw`
+        SELECT l.*, c.name as client_name
+        FROM leads l
+        LEFT JOIN clients c ON l.client_id = c.id
+        ORDER BY l.created_at DESC
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      
+      const countResult = await sqlRaw`SELECT COUNT(*) as count FROM leads`;
+      totalCount = countResult[0]?.count || 0;
+    }
+  } catch (e) {
+    console.error('Error fetching leads:', e);
   }
   
-  const leads = await db.select()
-    .from(schema.leads)
-    .where(whereClause)
-    .orderBy(desc(schema.leads.createdAt))
-    .limit(ITEMS_PER_PAGE)
-    .offset(offset)
-    .execute();
-    
-  // Get total count for pagination
-  const totalCount = await db.select({ count: sql<number>`count(*)` })
-    .from(schema.leads)
-    .where(whereClause)
-    .then(rows => rows[0]?.count || 0);
-  
-  const clients = await db.select().from(schema.clients).execute();
-  const clientMap = new Map(clients.map(c => [c.id, c.name]));
-  
-  return {
-    leads: leads.map(lead => ({
-      ...lead,
-      clientName: lead.clientId ? clientMap.get(lead.clientId) : null,
-    })),
-    totalCount,
-  };
+  return { leads, totalCount };
 }
 
 async function getAllLeadsForChart() {
-  const leads = await db.select().from(schema.leads).execute();
-  const clients = await db.select().from(schema.clients).execute();
-  const clientMap = new Map(clients.map(c => [c.id, c.name]));
-  
-  return leads.map(lead => ({
-    ...lead,
-    clientName: lead.clientId ? clientMap.get(lead.clientId) : null,
-  }));
+  try {
+    return await sqlRaw`SELECT * FROM leads ORDER BY created_at DESC`;
+  } catch (e) {
+    console.error('Error fetching all leads:', e);
+    return [];
+  }
 }
 
 function getLeadsByStatus(leads: any[]) {

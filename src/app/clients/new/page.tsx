@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
@@ -27,20 +25,12 @@ async function createClient(formData: FormData) {
   const notes = formData.get('notes') as string;
 
   const clientId = crypto.randomUUID();
-  
   const now = new Date().toISOString();
   
-  await db.insert(schema.clients).values({
-    id: clientId,
-    name,
-    company: company || null,
-    email: email || null,
-    phone: phone || null,
-    status: status as any,
-    notes: notes || null,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await sqlRaw`
+    INSERT INTO clients (id, name, company, email, phone, status, notes, created_at, updated_at)
+    VALUES (${clientId}, ${name}, ${company || null}, ${email || null}, ${phone || null}, ${status}, ${notes || null}, ${now}, ${now})
+  `;
 
   // Log audit
   await logAudit({

@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
-import { db } from '@/db';
-import { eq, desc, like, sql } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { ClientsFilters } from './clients-filters';
 import { Pagination } from '@/components/pagination';
 import { SearchInput } from '@/components/search-input';
@@ -21,32 +19,46 @@ interface PageProps {
 async function getCompanies(page: number, search?: string) {
   const offset = (page - 1) * ITEMS_PER_PAGE;
   
-  // Build where clause for search
-  let whereClause;
-  if (search) {
-    const searchPattern = `%${search}%`;
-    whereClause = like(schema.clients.company, searchPattern);
-  }
+  let companies: any[] = [];
+  let totalCount = 0;
   
-  // Get clients with pagination
-  const clients = await db.select()
-    .from(schema.clients)
-    .where(whereClause)
-    .orderBy(desc(schema.clients.createdAt))
-    .limit(ITEMS_PER_PAGE)
-    .offset(offset)
-    .execute();
-    
-  // Get total count for pagination
-  const totalCount = await db.select({ count: sql<number>`count(*)` })
-    .from(schema.clients)
-    .where(whereClause)
-    .then(rows => rows[0]?.count || 0);
+  try {
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const clients = await sqlRaw`
+        SELECT * FROM clients 
+        WHERE company ILIKE ${searchPattern}
+        ORDER BY created_at DESC
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      
+      const countResult = await sqlRaw`
+        SELECT COUNT(DISTINCT COALESCE(company, name)) as count FROM clients 
+        WHERE company ILIKE ${searchPattern}
+      `;
+      totalCount = countResult[0]?.count || 0;
+      companies = clients;
+    } else {
+      const clients = await sqlRaw`
+        SELECT * FROM clients 
+        ORDER BY created_at DESC
+        LIMIT ${ITEMS_PER_PAGE}
+        OFFSET ${offset}
+      `;
+      
+      const countResult = await sqlRaw`SELECT COUNT(DISTINCT COALESCE(company, name)) as count FROM clients`;
+      totalCount = countResult[0]?.count || 0;
+      companies = clients;
+    }
+  } catch (e) {
+    console.error('Error fetching companies:', e);
+  }
   
   // Group by company name
   const companyMap = new Map<string, { id: string; name: string; count: number; status: string }>();
   
-  for (const client of clients) {
+  for (const client of companies) {
     const companyName = client.company || client.name;
     
     if (companyMap.has(companyName)) {
@@ -69,9 +81,15 @@ async function getCompanies(page: number, search?: string) {
 }
 
 async function getPeopleAtCompany(companyName: string) {
-  return db.select().from(schema.clients).where(
-    sql`${schema.clients.company} = ${companyName} OR (${schema.clients.company} IS NULL AND ${schema.clients.name} = ${companyName})`
-  ).execute();
+  try {
+    return await sqlRaw`
+      SELECT * FROM clients 
+      WHERE company = ${companyName} OR (company IS NULL AND name = ${companyName})
+    `;
+  } catch (e) {
+    console.error('Error fetching people at company:', e);
+    return [];
+  }
 }
 
 export default async function CompaniesPage({ searchParams }: PageProps) {
