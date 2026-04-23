@@ -16,8 +16,6 @@ export async function POST(request: Request) {
     const status = formData.get('status') as string;
     const dueDate = formData.get('dueDate') as string;
     
-    console.log('Form data received:', { title, priority, status, dueDate });
-    
     if (!title) {
       return NextResponse.json(
         { success: false, error: 'Title is required' },
@@ -25,8 +23,10 @@ export async function POST(request: Request) {
       );
     }
     
+    const now = new Date();
     const taskId = crypto.randomUUID();
-    console.log('Inserting task:', taskId);
+    
+    console.log('Inserting task with all fields explicitly:', { taskId, title, priority, status });
     
     await db.insert(schema.tasks).values({
       id: taskId,
@@ -34,14 +34,19 @@ export async function POST(request: Request) {
       description: description || null,
       assigneeId: assigneeId || null,
       clientId: clientId || null,
-      priority: priority || 'medium',
-      status: status || 'pending',
+      status: (status || 'pending') as any,
+      priority: (priority || 'medium') as any,
       dueDate: dueDate ? new Date(dueDate) : null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      completedAt: null,
+      statusLockedAt: null,
+      pendingStatus: null,
+      pendingStatusRequestedBy: null,
+      pendingStatusRequestedAt: null,
+      createdAt: now,
+      updatedAt: now,
     }).execute();
     
-    console.log('Task created:', taskId);
+    console.log('Task created successfully');
     
     return NextResponse.json({
       success: true,
