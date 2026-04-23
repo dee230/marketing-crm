@@ -38,7 +38,7 @@ async function createClient(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  }).execute();
 
   // Log audit
   await logAudit({
@@ -47,7 +47,7 @@ async function createClient(formData: FormData) {
     entityType: 'client',
     entityId: clientId,
     details: { name, company, status },
-  });
+  }).execute();
 
   redirect('/clients');
 }

@@ -51,7 +51,7 @@ async function createUser(formData: FormData) {
     emailVerified: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  }).execute();
 
   // Log audit
   await logAudit({
@@ -60,7 +60,7 @@ async function createUser(formData: FormData) {
     entityType: 'user',
     entityId: newUserId,
     details: { name, email, role: finalRole },
-  });
+  }).execute();
 
   redirect('/users');
 }

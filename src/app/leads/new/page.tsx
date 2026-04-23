@@ -40,7 +40,7 @@ async function createLead(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  }).execute();
 
   // Log audit
   await logAudit({

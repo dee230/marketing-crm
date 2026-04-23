@@ -44,7 +44,7 @@ async function createInvoice(formData: FormData) {
     notes: notes || null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  }).execute();
 
   // Log audit
   await logAudit({
@@ -53,7 +53,7 @@ async function createInvoice(formData: FormData) {
     entityType: 'invoice',
     entityId: invoiceId,
     details: { invoiceNumber, amount, status },
-  });
+  }).execute();
 
   redirect('/invoices');
 }

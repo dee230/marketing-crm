@@ -39,7 +39,7 @@ async function createTask(formData: FormData) {
     dueDate: dueDate ? new Date(dueDate) : null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  }).execute();
 
   // Log audit
   await logAudit({
@@ -48,7 +48,7 @@ async function createTask(formData: FormData) {
     entityType: 'task',
     entityId: taskId,
     details: { title, priority, status },
-  });
+  }).execute();
 
   redirect('/tasks');
 }
