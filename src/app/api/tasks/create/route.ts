@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { logAudit } from '@/lib/audit-log';
 import * as schema from '@/db/schema';
 
 export async function POST(request: Request) {
+  console.log('API called: /api/tasks/create');
+  
   try {
     const formData = await request.formData();
     
@@ -15,6 +16,8 @@ export async function POST(request: Request) {
     const status = formData.get('status') as string;
     const dueDate = formData.get('dueDate') as string;
     
+    console.log('Form data received:', { title, priority, status, dueDate });
+    
     if (!title) {
       return NextResponse.json(
         { success: false, error: 'Title is required' },
@@ -23,6 +26,7 @@ export async function POST(request: Request) {
     }
     
     const taskId = crypto.randomUUID();
+    console.log('Inserting task:', taskId);
     
     await db.insert(schema.tasks).values({
       id: taskId,
@@ -37,6 +41,8 @@ export async function POST(request: Request) {
       updatedAt: new Date(),
     }).execute();
     
+    console.log('Task created:', taskId);
+    
     return NextResponse.json({
       success: true,
       taskId,
@@ -45,7 +51,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating task:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create task' },
+      { success: false, error: String(error) },
       { status: 500 }
     );
   }
