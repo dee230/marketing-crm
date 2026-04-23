@@ -31,27 +31,47 @@ async function getTasks(page: number, search?: string) {
     );
   }
   
-  const tasks = await db.select()
-    .from(schema.tasks)
-    .where(whereClause)
-    .orderBy(schema.tasks.dueDate)
-    .limit(ITEMS_PER_PAGE)
-    .offset(offset)
-    .execute();
-    
-  // Get total count for pagination
-  const totalCount = await db.select({ count: sql<number>`count(*)` })
-    .from(schema.tasks)
-    .where(whereClause)
-    .then(rows => rows[0]?.count || 0);
+  let tasks: any[] = [];
+  let totalCount = 0;
   
-  const [users, clients] = await Promise.all([
-    db.select().from(schema.users).execute(),
-    db.select().from(schema.clients).execute(),
-  ]);
+  try {
+    tasks = await db.select()
+      .from(schema.tasks)
+      .where(whereClause)
+      .orderBy(schema.tasks.dueDate)
+      .limit(ITEMS_PER_PAGE)
+      .offset(offset)
+      .execute();
+  } catch (e) {
+    console.error('Error fetching tasks:', e);
+  }
   
-  const userMap = new Map(users.map(u => [u.id, u.name]));
-  const clientMap = new Map(clients.map(c => [c.id, c.name]));
+  try {
+    const countResult = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.tasks)
+      .where(whereClause)
+      .execute();
+    totalCount = countResult[0]?.count || 0;
+  } catch (e) {
+    console.error('Error counting tasks:', e);
+  }
+  
+  let users: any[] = [];
+  let clients: any[] = [];
+  
+  try {
+    const result = await Promise.all([
+      db.select().from(schema.users).execute(),
+      db.select().from(schema.clients).execute(),
+    ]);
+    users = result[0] || [];
+    clients = result[1] || [];
+  } catch (e) {
+    console.error('Error fetching users/clients:', e);
+  }
+  
+  const userMap = new Map(users.map((u: any) => [u.id, u.name]));
+  const clientMap = new Map(clients.map((c: any) => [c.id, c.name]));
   
   return {
     tasks: tasks.map(task => ({
