@@ -9,24 +9,38 @@ import * as schema from '@/db/schema';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ReportsPage() {
-  const session = await getSession();
-  if (!session) redirect('/sign-in');
+async function getReportData() {
+  let allInvoices: any[] = [];
+  let allClients: any[] = [];
+  let allLeads: any[] = [];
+  let allTasks: any[] = [];
 
-  const userRole = (session.user as any)?.role;
-  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
-  const canViewInvoices = isAdmin;
+  try {
+    allInvoices = await db.select().from(schema.invoices).execute();
+  } catch (e) {
+    console.error('Error fetching invoices:', e);
+  }
 
-  // Get all invoices with client data
-  const allInvoices = await db.select().from(schema.invoices).execute();
-  const allClients = await db.select().from(schema.clients).execute();
-  const allLeads = await db.select().from(schema.leads).execute();
-  const allTasks = await db.select().from(schema.tasks).execute();
+  try {
+    allClients = await db.select().from(schema.clients).execute();
+  } catch (e) {
+    console.error('Error fetching clients:', e);
+  }
 
-  const clientMap = new Map(allClients.map(c => [c.id, c]));
+  try {
+    allLeads = await db.select().from(schema.leads).execute();
+  } catch (e) {
+    console.error('Error fetching leads:', e);
+  }
+
+  try {
+    allTasks = await db.select().from(schema.tasks).execute();
+  } catch (e) {
+    console.error('Error fetching tasks:', e);
+  }
 
   // Calculate invoice stats
-  const totalRevenue = allInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  const totalRevenue = allInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
   const paidInvoices = allInvoices.filter(inv => inv.status === 'paid').length;
   const pendingInvoices = allInvoices.filter(inv => inv.status === 'sent').length;
   const overdueInvoices = allInvoices.filter(inv => inv.status === 'overdue').length;
@@ -44,6 +58,40 @@ export default async function ReportsPage() {
   // Calculate client stats
   const activeClients = allClients.filter(c => c.status === 'active').length;
   const inactiveClients = allClients.filter(c => c.status === 'inactive').length;
+
+  return {
+    // Stats
+    totalRevenue,
+    paidInvoices,
+    pendingInvoices,
+    overdueInvoices,
+    newLeads,
+    convertedLeads,
+    contactedLeads,
+    completedTasks,
+    pendingTasks,
+    inProgressTasks,
+    activeClients,
+    inactiveClients,
+    totalInvoices: allInvoices.length,
+    totalClients: allClients.length,
+    totalLeads: allLeads.length,
+    totalTasks: allTasks.length,
+    // Raw data for rendering
+    invoices: allInvoices,
+    clients: allClients,
+  };
+}
+
+export default async function ReportsPage() {
+  const session = await getSession();
+  if (!session) redirect('/sign-in');
+
+  const userRole = (session.user as any)?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const canViewInvoices = isAdmin;
+
+  const data = await getReportData();
 
   return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
@@ -66,23 +114,23 @@ export default async function ReportsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(129, 178, 154, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Total Revenue</p>
-                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>KES {totalRevenue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>KES {data.totalRevenue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(129, 178, 154, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Paid</p>
-                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{paidInvoices}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{data.paidInvoices}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(242, 204, 143, 0.2)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Pending</p>
-                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{pendingInvoices}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{data.pendingInvoices}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(224, 122, 95, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Overdue</p>
-                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{overdueInvoices}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{data.overdueInvoices}</p>
                 </div>
               </div>
 
-              {allInvoices.length > 0 && (
+              {data.totalInvoices > 0 && (
                 <div className="overflow-hidden">
                   <table>
                     <thead>
@@ -95,10 +143,10 @@ export default async function ReportsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {allInvoices.map((invoice) => (
+                      {data.invoices.map((invoice) => (
                         <tr key={invoice.id}>
                           <td className="font-medium">{invoice.invoiceNumber}</td>
-                          <td style={{ color: '#9B9B8F' }}>{clientMap.get(invoice.clientId)?.name || 'N/A'}</td>
+                          <td style={{ color: '#9B9B8F' }}>{data.clients.find(c => c.id === invoice.clientId)?.name || 'N/A'}</td>
                           <td className="font-medium">KES {invoice.amount?.toLocaleString('en-KE') || '0.00'}</td>
                           <td>
                             <span className={`badge ${
@@ -128,19 +176,19 @@ export default async function ReportsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(224, 122, 95, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Total Leads</p>
-                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{allLeads.length}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{data.totalLeads}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(224, 122, 95, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>New</p>
-                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{newLeads}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#E07A5F' }}>{data.newLeads}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(242, 204, 143, 0.2)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Contacted</p>
-                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{contactedLeads}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{data.contactedLeads}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(129, 178, 154, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Converted</p>
-                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{convertedLeads}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{data.convertedLeads}</p>
                 </div>
               </div>
             </div>
@@ -149,17 +197,17 @@ export default async function ReportsPage() {
             <div className="card p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Client Summary</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg" style={{ background: 'rgba(61, 64, 91, 0.15)' }}>
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(61, 64,91, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Total Clients</p>
-                  <p className="text-2xl font-bold" style={{ color: '#3D405B' }}>{allClients.length}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#3D405B' }}>{data.totalClients}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(129, 178, 154, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Active</p>
-                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{activeClients}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{data.activeClients}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(155, 155, 143, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Inactive</p>
-                  <p className="text-2xl font-bold" style={{ color: '#9B9B8F' }}>{inactiveClients}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#9B9B8F' }}>{data.inactiveClients}</p>
                 </div>
               </div>
             </div>
@@ -170,15 +218,15 @@ export default async function ReportsPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(61, 64, 91, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Total Tasks</p>
-                  <p className="text-2xl font-bold" style={{ color: '#3D405B' }}>{allTasks.length}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#3D405B' }}>{data.totalTasks}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(129, 178, 154, 0.15)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>Completed</p>
-                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{completedTasks}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#81B29A' }}>{data.completedTasks}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(242, 204, 143, 0.2)' }}>
                   <p className="text-sm" style={{ color: '#9B9B8F' }}>In Progress</p>
-                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{inProgressTasks}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#B8923D' }}>{data.inProgressTasks}</p>
                 </div>
               </div>
             </div>
