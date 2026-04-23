@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/auth';
+import { getSession } from '@/lib/session';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { TopNav } from '@/components/top-nav';
 import { db } from '@/db';
@@ -44,11 +43,11 @@ async function getStats() {
 }
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authConfig);
+  const session = await getSession();
   if (!session) redirect('/sign-in');
 
   const stats = await getStats();
-  const userRole = (session.user as any)?.role;
+  const userRole = session.user.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
   return (
