@@ -4,9 +4,11 @@ import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/auth';
 import { TopNav } from '@/components/top-nav';
+import { SidebarNav } from '@/components/sidebar-nav';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
+import { canViewTasks, canManageTasks } from '@/lib/roles';
 import { TaskStatusEdit } from './task-status-edit';
 
 export const dynamic = 'force-dynamic';
@@ -42,6 +44,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
 
   const userRole = (session.user as any)?.role;
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const canManage = canManageTasks(userRole);
   const assignee = await getAssignee(task.assigneeId);
   const client = await getClient(task.clientId);
 
@@ -51,16 +54,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
 
       <div className="flex">
         <aside className="w-64 min-h-screen" style={{ background: '#FFFFFF', borderRight: '1px solid #E8E4DD' }}>
-          <nav className="mt-6 px-4 space-y-1">
-            <Link href="/dashboard" className="sidebar-link">Dashboard</Link>
-            <Link href="/clients" className="sidebar-link">Clients</Link>
-            <Link href="/leads" className="sidebar-link">Leads</Link>
-            <Link href="/invoices" className="sidebar-link">Invoices</Link>
-            <Link href="/accounting/pending" className="sidebar-link">Accounting</Link>
-            <Link href="/tasks" className="sidebar-link" style={{ background: 'rgba(224, 122, 95, 0.1)', color: '#E07A5F' }}>Tasks</Link>
-            <Link href="/reports" className="sidebar-link">Reports</Link>
-            <Link href="/users" className="sidebar-link">Users</Link>
-          </nav>
+          <SidebarNav currentPath="/tasks" userRole={userRole} />
         </aside>
 
         <main className="flex-1 p-8">

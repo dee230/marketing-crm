@@ -40,6 +40,22 @@ export function canManageInvoices(role: string | undefined): boolean {
 }
 
 /**
+ * Check if user can view tasks
+ * All users can view tasks
+ */
+export function canViewTasks(role: string | undefined): boolean {
+  return true;
+}
+
+/**
+ * Check if user can manage tasks
+ * Admins and super_admins can manage (edit/delete) tasks
+ */
+export function canManageTasks(role: string | undefined): boolean {
+  return role === 'admin' || role === 'super_admin';
+}
+
+/**
  * Check if user can access accounting
  * Only admins and super_admins can access accounting
  */

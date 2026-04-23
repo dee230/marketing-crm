@@ -87,16 +87,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
 
       <div className="flex">
         <aside className="w-64 min-h-screen" style={{ background: '#FFFFFF', borderRight: '1px solid #E8E4DD' }}>
-          <nav className="mt-6 px-4 space-y-1">
-            <Link href="/dashboard" className="sidebar-link">Dashboard</Link>
-            <Link href="/clients" className="sidebar-link" style={{ background: 'rgba(224, 122, 95, 0.1)', color: '#E07A5F' }}>Clients</Link>
-            <Link href="/leads" className="sidebar-link">Leads</Link>
-            <Link href="/invoices" className="sidebar-link">Invoices</Link>
-            <Link href="/accounting/pending" className="sidebar-link">Accounting</Link>
-            <Link href="/tasks" className="sidebar-link">Tasks</Link>
-            <Link href="/reports" className="sidebar-link">Reports</Link>
-            <Link href="/users" className="sidebar-link">Users</Link>
-          </nav>
+          <SidebarNav currentPath="/clients" userRole={userRole} />
         </aside>
 
         <main className="flex-1 p-8">
