@@ -47,6 +47,7 @@ async function getInvoices() {
     ...invoice,
     client: invoice,
     clientName: invoice.client_name || null,
+    invoiceNumber: invoice.invoice_number || null,
   }));
 }
 
