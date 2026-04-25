@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { sqlRaw, query } from '@/db';
+import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
 
 interface RouteParams {
@@ -17,25 +17,39 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const userId = (session?.user as any)?.id;
     const now = new Date().toISOString();
     
-    // Build update query
-    const updates: string[] = [];
-    if (body.name !== undefined) updates.push(`name = '${body.name.replace(/'/g, "''")}'`);
-    if (body.email !== undefined) updates.push(`email = ${body.email ? `'${body.email.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.phone !== undefined) updates.push(`phone = ${body.phone ? `'${body.phone.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.company !== undefined) updates.push(`company = ${body.company ? `'${body.company.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.status !== undefined) updates.push(`status = '${body.status}'`);
-    if (body.notes !== undefined) updates.push(`notes = ${body.notes ? `'${body.notes.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.website !== undefined) updates.push(`website = ${body.website ? `'${body.website.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.linkedin !== undefined) updates.push(`linkedin = ${body.linkedin ? `'${body.linkedin.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.twitter !== undefined) updates.push(`twitter = ${body.twitter ? `'${body.twitter.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.instagram !== undefined) updates.push(`instagram = ${body.instagram ? `'${body.instagram.replace(/'/g, "''")}'` : 'NULL'}`);
-    if (body.otherLinks !== undefined) updates.push(`other_links = ${body.otherLinks ? `'${body.otherLinks.replace(/'/g, "''")}'` : 'NULL'}`);
-    
-    updates.push(`updated_at = '${now}'`);
-    
-    if (updates.length > 0) {
-      const updateQuery = `UPDATE clients SET ${updates.join(', ')} WHERE id = '${id}'`;
-      await query(updateQuery);
+    // Build update query using tagged template
+    if (body.name !== undefined) {
+      await sqlRaw`UPDATE clients SET name = ${body.name}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.email !== undefined) {
+      await sqlRaw`UPDATE clients SET email = ${body.email || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.phone !== undefined) {
+      await sqlRaw`UPDATE clients SET phone = ${body.phone || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.company !== undefined) {
+      await sqlRaw`UPDATE clients SET company = ${body.company || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.status !== undefined) {
+      await sqlRaw`UPDATE clients SET status = ${body.status}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.notes !== undefined) {
+      await sqlRaw`UPDATE clients SET notes = ${body.notes || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.website !== undefined) {
+      await sqlRaw`UPDATE clients SET website = ${body.website || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.linkedin !== undefined) {
+      await sqlRaw`UPDATE clients SET linkedin = ${body.linkedin || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.twitter !== undefined) {
+      await sqlRaw`UPDATE clients SET twitter = ${body.twitter || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.instagram !== undefined) {
+      await sqlRaw`UPDATE clients SET instagram = ${body.instagram || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
+    if (body.otherLinks !== undefined) {
+      await sqlRaw`UPDATE clients SET other_links = ${body.otherLinks || null}, updated_at = ${now} WHERE id = ${id}`;
     }
     
     // Log the action
