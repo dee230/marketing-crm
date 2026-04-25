@@ -40,8 +40,19 @@ async function getStats() {
   }
 
   try {
-    // Use raw SQL for tasks
-    allTasksFull = await sqlRaw`SELECT * FROM tasks ORDER BY created_at DESC`;
+    // Use raw SQL for tasks with due dates (all statuses, not just pending)
+    const tasksWithDates = await sqlRaw`SELECT * FROM tasks WHERE due_date IS NOT NULL ORDER BY due_date ASC LIMIT 50`;
+    // Map snake_case to camelCase for the calendar component
+    allTasksFull = tasksWithDates.map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      status: t.status,
+      priority: t.priority,
+      dueDate: t.due_date,
+      clientId: t.client_id,
+      createdAt: t.created_at,
+    }));
   } catch (e) {
     console.error('Error fetching tasks:', e);
   }
@@ -136,7 +147,7 @@ export default async function DashboardPage() {
               {/* Calendar */}
               <div className="card p-6">
                 <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Upcoming Tasks</h2>
-                <DashboardCalendar tasks={stats.pendingTasks} />
+                <DashboardCalendar tasks={stats.allTasks} />
               </div>
 
               {/* Activity */}
