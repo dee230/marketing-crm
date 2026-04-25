@@ -152,7 +152,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
               </div>
             ) : (
               <>
-                <ClientsFilters companies={companies} />
+                <ClientsFilters companies={companies} isAdmin={isAdmin} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} basePath="/clients" />
               </>
             )}

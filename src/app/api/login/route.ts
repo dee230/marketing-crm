@@ -42,13 +42,13 @@ export async function POST(request: Request) {
       user: { id: user.id, email: user.email, name: user.name, role: user.role }
     });
 
-    // Set our custom session cookie
+// Set our custom session cookie
     const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
     response.cookies.set('crm-session', sessionToken, {
       httpOnly: true,
-      secure: true,
+      secure: true, // Always use secure - Vercel always provides HTTPS
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 

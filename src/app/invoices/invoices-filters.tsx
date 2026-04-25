@@ -9,7 +9,7 @@ interface Invoice {
   clientName: string | null;
   amount: number;
   status: string;
-  dueDate: Date | null;
+  dueDate: Date | string | null;
   paymentReference?: string | null;
 }
 
@@ -180,7 +180,10 @@ export function InvoicesFilters({ invoices, isAdmin = false }: InvoicesFiltersPr
                     )}
                   </td>
                   <td style={{ color: '#9B9B8F' }}>
-                    {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-'}
+                    {invoice.dueDate ? (() => {
+                      const d = typeof invoice.dueDate === 'string' ? new Date(invoice.dueDate) : invoice.dueDate;
+                      return d.toLocaleDateString();
+                    })() : '-'}
                   </td>
                   <td>
                     <Link 

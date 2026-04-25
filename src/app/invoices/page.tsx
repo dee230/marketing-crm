@@ -48,6 +48,7 @@ async function getInvoices() {
     client: invoice,
     clientName: invoice.client_name || null,
     invoiceNumber: invoice.invoice_number || null,
+    dueDate: invoice.due_date ? new Date(invoice.due_date) : null,
   }));
 }
 

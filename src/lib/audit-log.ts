@@ -1,6 +1,4 @@
-import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@/db/schema';
+import { sqlRaw } from '@/db';
 import { nanoid } from 'nanoid';
 
 export type AuditAction =
@@ -43,54 +41,16 @@ interface AuditLogParams {
 
 export async function logAudit(params: AuditLogParams) {
   try {
-    await db.insert(schema.auditLogs).values({
-      id: nanoid(),
-      userId: params.userId || null,
-      action: params.action,
-      entityType: params.entityType,
-      entityId: params.entityId,
-      details: params.details ? JSON.stringify(params.details) : null,
-      ipAddress: params.ipAddress || null,
-      userAgent: params.userAgent || null,
-      createdAt: new Date().toISOString(),
-    });
+    const id = nanoid();
+    const details = params.details ? JSON.stringify(params.details) : null;
+    const now = new Date().toISOString();
+    
+    await sqlRaw`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, user_agent, created_at)
+      VALUES (${id}, ${params.userId || null}, ${params.action}, ${params.entityType}, ${params.entityId}, ${details}, ${params.ipAddress || null}, ${params.userAgent || null}, ${now})
+    `;
   } catch (error) {
     // Never throw - audit logging should never break the main operation
     console.error('Failed to write audit log:', error);
   }
-}
-
-export async function getAuditLogs(options?: {
-  entityType?: AuditEntityType;
-  entityId?: string;
-  userId?: string;
-  action?: AuditAction;
-  limit?: number;
-}) {
-  let query = db.select().from(schema.auditLogs);
-
-  const conditions = [];
-  if (options?.entityType) {
-    conditions.push(eq(schema.auditLogs.entityType, options.entityType));
-  }
-  if (options?.entityId) {
-    conditions.push(eq(schema.auditLogs.entityId, options.entityId));
-  }
-  if (options?.userId) {
-    conditions.push(eq(schema.auditLogs.userId, options.userId));
-  }
-  if (options?.action) {
-    conditions.push(eq(schema.auditLogs.action, options.action));
-  }
-
-  if (conditions.length > 0) {
-    query = query.where(
-      conditions.length === 1
-        ? conditions[0]
-        : conditions.reduce((acc, cond) => eq(schema.auditLogs.id, schema.auditLogs.id), conditions[0])
-    ) as typeof query;
-  }
-
-  const limit = options?.limit || 100;
-  return query.limit(limit).orderBy(schema.auditLogs.createdAt);
 }

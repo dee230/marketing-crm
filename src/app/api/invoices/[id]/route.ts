@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { sqlRaw } from '@/db';
+import { sqlRaw, query } from '@/db';
 import { logAudit } from '@/lib/audit-log';
 
 interface RouteParams {
@@ -59,7 +59,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   
   updates.push(`updated_at = '${now}'`);
   
-  await sqlRaw`UPDATE invoices SET ${sqlRaw(updates.join(', '))} WHERE id = ${id}`;
+  await query(`UPDATE invoices SET ${updates.join(', ')} WHERE id = '${id}'`);
   
   // Log status changes
   if (body.status && body.status !== currentInvoice.status) {

@@ -20,32 +20,34 @@ async function getAuditLogs(searchParams: SearchParams) {
   let users: any[] = [];
   
   try {
-    // Build WHERE clause
-    const conditions: string[] = [];
-    if (entityType && entityType !== 'all') {
-      conditions.push(`entity_type = '${entityType}'`);
-    }
-    if (action && action !== 'all') {
-      conditions.push(`action = '${action}'`);
+    // Build WHERE clause - use tagged template
+    let whereClause = '';
+    if (entityType && entityType !== 'all' && action && action !== 'all') {
+      whereClause = `WHERE entity_type = '${entityType}' AND action = '${action}'`;
+    } else if (entityType && entityType !== 'all') {
+      whereClause = `WHERE entity_type = '${entityType}'`;
+    } else if (action && action !== 'all') {
+      whereClause = `WHERE action = '${action}'`;
     }
     if (search) {
-      conditions.push(`(entity_id LIKE '%${search}%' OR user_id LIKE '%${search}%')`);
+      const suffix = whereClause ? ' AND ' : 'WHERE ';
+      whereClause += suffix + `(entity_id LIKE '%${search}%' OR user_id LIKE '%${search}%')`;
     }
     
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    
-    logs = await sqlRaw`
-      SELECT * FROM audit_logs 
-      ${sqlRaw(whereClause || '')}
-      ORDER BY created_at DESC 
-      LIMIT 100
-    `;
+    // Use tagged template with LIMIT as parameter
+    if (whereClause) {
+      logs = await sqlRaw`SELECT * FROM audit_logs ${sqlRaw(whereClause)} ORDER BY created_at DESC LIMIT 100`;
+    } else {
+      logs = await sqlRaw`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100`;
+    }
     
     // Get user details
     if (logs.length > 0) {
       const userIds = [...new Set(logs.map(l => l.user_id).filter(Boolean))];
       if (userIds.length > 0) {
-        users = await sqlRaw`SELECT * FROM users WHERE id = ANY(${userIds})`;
+        // Use IN query for userIds
+        const userIdList = userIds.map(id => `'${id}'`).join(', ');
+        users = await sqlRaw`SELECT * FROM users WHERE id IN (${userIdList})`;
       }
     }
   } catch (e) {
@@ -184,7 +186,7 @@ export default async function AuditLogsPage({
                     {logs.map((log) => (
                       <tr key={log.id} className="border-t" style={{ borderColor: '#E8E4DD' }}>
                         <td className="px-6 py-4 text-sm" style={{ color: '#9B9B8F' }}>
-                          {log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}
+                          {log.created_at ? new Date(log.created_at).toLocaleString() : '-'}
                         </td>
                         <td className="px-6 py-4">
                           <span className="font-medium" style={{ color: '#2D2A26' }}>
@@ -203,13 +205,13 @@ export default async function AuditLogsPage({
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm" style={{ color: '#2D2A26' }}>
-                          {log.entityType}
+                          {log.entity_type}
                         </td>
                         <td className="px-6 py-4 text-sm font-mono" style={{ color: '#9B9B8F' }}>
-                          {log.entityId.slice(0, 12)}...
+                          {(log.entity_id || '').slice(0, 12)}...
                         </td>
                         <td className="px-6 py-4 text-sm font-mono" style={{ color: '#9B9B8F' }}>
-                          {log.ipAddress || '-'}
+                          {log.ip_address || '-'}
                         </td>
                         <td className="px-6 py-4 text-sm" style={{ color: '#9B9B8F' }}>
                           {log.details ? (

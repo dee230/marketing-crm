@@ -12,10 +12,13 @@ interface Company {
 
 interface ClientsFiltersProps {
   companies: Company[];
+  isAdmin?: boolean;
 }
 
-export function ClientsFilters({ companies }: ClientsFiltersProps) {
+export function ClientsFilters({ companies, isAdmin = false }: ClientsFiltersProps) {
   const [statusFilter, setStatusFilter] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const filteredCompanies = companies.filter(company => {
     if (statusFilter && company.status !== statusFilter) return false;
@@ -27,6 +30,30 @@ export function ClientsFilters({ companies }: ClientsFiltersProps) {
     { value: 'inactive', label: 'Inactive' },
     { value: 'prospect', label: 'Prospect' },
   ];
+
+  const handleStatusChange = async (companyId: string, newStatus: string) => {
+    setSavingId(companyId);
+    try {
+      const response = await fetch(`/api/clients/${companyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      alert('Failed to update status');
+    } finally {
+      setSavingId(null);
+      setEditingId(null);
+    }
+  };
 
   return (
     <>
@@ -80,13 +107,49 @@ export function ClientsFilters({ companies }: ClientsFiltersProps) {
                   </td>
                   <td style={{ color: '#9B9B8F' }}>{company.count} contact{company.count > 1 ? 's' : ''}</td>
                   <td>
-                    <span className={`badge ${
-                      company.status === 'active' ? 'badge-active' :
-                      company.status === 'inactive' ? 'badge-pending' :
-                      'badge-pending'
-                    }`}>
-                      {company.status}
-                    </span>
+                    {isAdmin && company.status !== 'deleted' ? (
+                      editingId === company.id ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={company.status}
+                            onChange={(e) => handleStatusChange(company.id, e.target.value)}
+                            className="text-sm px-2 py-1 rounded border"
+                            style={{ borderColor: '#E8E4DD' }}
+                            autoFocus
+                          >
+                            {statuses.map(s => (
+                              <option key={s.value} value={s.value}>{s.label}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-sm px-2 py-1"
+                            style={{ color: '#9B9B8F' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          className={`badge cursor-pointer ${
+                            company.status === 'active' ? 'badge-active' :
+                            company.status === 'inactive' ? 'badge-pending' :
+                            'badge-pending'
+                          }`}
+                          onClick={() => setEditingId(company.id)}
+                        >
+                          {company.status}
+                        </span>
+                      )
+                    ) : (
+                      <span className={`badge ${
+                        company.status === 'active' ? 'badge-active' :
+                        company.status === 'inactive' ? 'badge-pending' :
+                        'badge-pending'
+                      }`}>
+                        {company.status}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))

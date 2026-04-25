@@ -17,6 +17,7 @@ export async function getSession(): Promise<{ user: SessionUser } | null> {
   
   // Try our custom session first
   const customSession = cookieStore.get('crm-session');
+  
   if (customSession) {
     try {
       const decoded = JSON.parse(base64Decode(customSession.value));
@@ -32,7 +33,7 @@ export async function getSession(): Promise<{ user: SessionUser } | null> {
         },
       };
     } catch {
-      // Invalid session, continue to check NextAuth
+      // Invalid session
     }
   }
 
