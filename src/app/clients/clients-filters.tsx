@@ -19,6 +19,7 @@ export function ClientsFilters({ companies, isAdmin = false }: ClientsFiltersPro
   const [statusFilter, setStatusFilter] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredCompanies = companies.filter(company => {
     if (statusFilter && company.status !== statusFilter) return false;
@@ -55,6 +56,31 @@ export function ClientsFilters({ companies, isAdmin = false }: ClientsFiltersPro
     }
   };
 
+  const handleDelete = async (companyId: string) => {
+    if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeletingId(companyId);
+    try {
+      const response = await fetch(`/api/clients/${companyId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete client');
+      }
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+      alert('Failed to delete client');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <>
       <div className="flex gap-3 mb-4">
@@ -88,12 +114,13 @@ export function ClientsFilters({ companies, isAdmin = false }: ClientsFiltersPro
               <th>Company</th>
               <th>Contacts</th>
               <th>Status</th>
+              {isAdmin && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {filteredCompanies.length === 0 ? (
               <tr>
-                <td colSpan={3} className="text-center py-8" style={{ color: '#9B9B8F' }}>
+                <td colSpan={isAdmin ? 4 : 3} className="text-center py-8" style={{ color: '#9B9B8F' }}>
                   No companies match the selected filters
                 </td>
               </tr>
@@ -151,6 +178,21 @@ export function ClientsFilters({ companies, isAdmin = false }: ClientsFiltersPro
                       </span>
                     )}
                   </td>
+                  {isAdmin && (
+                    <td>
+                      <button
+                        onClick={() => handleDelete(company.id)}
+                        disabled={deletingId === company.id}
+                        className="p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Delete client"
+                        style={{ color: deletingId === company.id ? '#ccc' : '#dc2626' }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}

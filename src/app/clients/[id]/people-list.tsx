@@ -44,6 +44,7 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
   const [editingId, setEditingId] = useState<string | null>(null);
   const [peopleData, setPeopleData] = useState<Map<string, Person>>(new Map(people.map(p => [p.id, { ...p }])));
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const updatePerson = (id: string, field: keyof Person, value: string) => {
     const updated = new Map(peopleData);
@@ -85,6 +86,32 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
       setPeopleData(updated);
     }
     setEditingId(null);
+  };
+
+  const handleDelete = async (personId: string, isLead: boolean) => {
+    if (!confirm('Are you sure you want to delete this person? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeletingId(personId);
+    try {
+      const endpoint = isLead ? `/api/leads/${personId}` : `/api/clients/${personId}`;
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        router.refresh();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete person');
+      }
+    } catch (error) {
+      console.error('Failed to delete person:', error);
+      alert('Failed to delete person');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -199,18 +226,19 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
                     <p className="text-sm" style={{ color: '#9B9B8F' }}>{person.phone}</p>
                   )}
                   
-                  <div className="mt-3 pt-3" style={{ borderTop: '1px solid #E8E4DD' }}>
-                    <div className="flex justify-between text-sm">
+                  <div className="mt-3 pt-3 flex justify-between items-center" style={{ borderTop: '1px solid #E8E4DD' }}>
+                    <div className="flex justify-between text-sm flex-1">
                       <span style={{ color: '#9B9B8F' }}>Pending</span>
                       <span style={{ color: '#E07A5F' }}>KES {personPending.reduce((s, i) => s + i.amount, 0).toLocaleString('en-KE')}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm flex-1">
                       <span style={{ color: '#9B9B8F' }}>Tasks</span>
                       <span style={{ color: '#2D2A26' }}>{personTasks.length}</span>
                     </div>
                   </div>
                   
-{isAdmin && !isLead && (
+                  <div className="flex gap-2 mt-3">
+                    {isAdmin && !isLead && (
                       <button
                         onClick={() => setEditingId(person.id)}
                         className="text-xs mt-2 px-2 py-1 rounded"
@@ -219,6 +247,17 @@ export function PeopleList({ people, allInvoices, allTasks, isAdmin, companyName
                         Edit
                       </button>
                     )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(person.id, isLead)}
+                        disabled={deletingId === person.id}
+                        className="text-xs mt-2 px-2 py-1 rounded"
+                        style={{ color: '#dc2626', background: 'rgba(220, 38, 38, 0.1)' }}
+                      >
+                        {deletingId === person.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>

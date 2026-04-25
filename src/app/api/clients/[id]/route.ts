@@ -68,3 +68,43 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const session = await getSession();
+  
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const userRole = (session?.user as any)?.role;
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
+  }
+  
+  const { id } = await params;
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
+  const userId = (session?.user as any)?.id;
+  
+  // Check if client exists
+  const clients = await sqlRaw`SELECT * FROM clients WHERE id = ${id} LIMIT 1`;
+  
+  if (!clients[0]) {
+    return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+  }
+  
+  // Delete the client
+  await sqlRaw`DELETE FROM clients WHERE id = ${id}`;
+  
+  // Log audit
+  await logAudit({
+    userId,
+    action: 'client_deleted',
+    entityType: 'client',
+    entityId: id,
+    details: { name: clients[0].name, company: clients[0].company },
+    ipAddress: ipAddress || undefined,
+  });
+  
+  return NextResponse.json({ success: true });
+}
