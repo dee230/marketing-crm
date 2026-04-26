@@ -184,7 +184,6 @@ export default async function DashboardPage() {
                 <ActivityFeed recentTasks={stats.recentTasks} recentLeads={stats.recentLeads} recentInvoices={stats.recentInvoices} />
               </div>
             </div>
-            </div>
           </div>
         </main>
       </div>
