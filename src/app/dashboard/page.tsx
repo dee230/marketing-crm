@@ -143,22 +143,8 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-8">
-              {/* Calendar */}
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Upcoming Tasks</h2>
-                <DashboardCalendar tasks={stats.allTasks} />
-              </div>
-
-              {/* Activity */}
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Recent Activity</h2>
-                <ActivityFeed recentTasks={stats.recentTasks} recentLeads={stats.recentLeads} recentInvoices={stats.recentInvoices} />
-              </div>
-            </div>
-
             {/* Quick Links */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <Link href="/clients" className="card p-4 text-center hover:shadow-lg transition-shadow">
                 <svg className="w-8 h-8 mx-auto mb-2" style={{ color: '#E07A5F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -183,6 +169,21 @@ export default async function DashboardPage() {
                 </svg>
                 <span style={{ color: '#2D2A26' }}>Tasks</span>
               </Link>
+            </div>
+
+            <div className="space-y-8">
+              {/* Calendar */}
+              <div className="card p-6">
+                <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Upcoming Tasks</h2>
+                <DashboardCalendar tasks={stats.allTasks} />
+              </div>
+
+              {/* Activity */}
+              <div className="card p-6">
+                <h2 className="text-lg font-semibold mb-4" style={{ color: '#2D2A26' }}>Recent Activity</h2>
+                <ActivityFeed recentTasks={stats.recentTasks} recentLeads={stats.recentLeads} recentInvoices={stats.recentInvoices} />
+              </div>
+            </div>
             </div>
           </div>
         </main>
