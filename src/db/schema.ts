@@ -228,3 +228,28 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Integrations table (LinkedIn, Facebook, Canva connections)
+export const integrations = pgTable('integrations', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(), // 'linkedin', 'facebook', 'canva'
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { mode: 'date' }),
+  pageId: text('page_id'), // For Facebook Page ID
+  pageName: text('page_name'), // For Facebook Page name
+  companyId: text('company_id'), // For LinkedIn Company ID
+  companyName: text('company_name'), // For LinkedIn Company name
+  canvaFolderId: text('canva_folder_id'), // For Canva export folder
+  status: text('status').notNull().default('disconnected'),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
+});
+
+export const integrationsRelations = relations(integrations, ({ one }) => ({
+  user: one(users, {
+    fields: [integrations.userId],
+    references: [users.id],
+  }),
+}));
