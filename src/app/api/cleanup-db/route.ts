@@ -1,74 +1,35 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
 import { sqlRaw } from '@/db';
 
-export async function POST() {
-  const session = await getSession();
+export async function POST(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const apiKey = searchParams.get('key');
   
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
-  const userRole = (session.user as any)?.role;
-  if (userRole !== 'super_admin') {
-    return NextResponse.json({ error: 'Forbidden - Super admin only' }, { status: 403 });
+  // Verify API key
+  if (apiKey !== 'cleanup-db-key-2024') {
+    return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
   }
   
   try {
-    // Get users to keep
-    const usersToKeep = await sqlRaw`
-      SELECT id FROM users WHERE email = 'stephaniegow93@gmail.com' OR email = 'denzel.rooke23@gmail.com'
-    `;
-    
-    const userIds = usersToKeep.map((u: any) => u.id);
-    
-    if (userIds.length === 0) {
-      return NextResponse.json({ error: 'Users to keep not found' }, { status: 400 });
-    }
-    
     const now = new Date().toISOString();
     
-    // Delete all related data except for the users we keep
-    // Disable foreign key checks temporarily
-    await sqlRaw`SET CONSTRAINTS ALL DEFERRED`;
-    
-    // Delete audit logs
+    // Clear all data except users we want to keep
     await sqlRaw`DELETE FROM audit_logs`;
-    
-    // Delete password reset requests
     await sqlRaw`DELETE FROM password_reset_requests`;
-    
-    // Delete sessions
     await sqlRaw`DELETE FROM sessions`;
-    
-    // Delete accounts
     await sqlRaw`DELETE FROM accounts`;
-    
-    // Delete tasks (keep only tasks by users we want to keep)
     await sqlRaw`DELETE FROM tasks`;
-    
-    // Delete leads
     await sqlRaw`DELETE FROM leads`;
-    
-    // Delete invoices
     await sqlRaw`DELETE FROM invoices`;
-    
-    // Delete clients
     await sqlRaw`DELETE FROM clients`;
-    
-    // Delete integrations
     await sqlRaw`DELETE FROM integrations`;
     
-    // Delete the third user if exists (Cristiano)
-    const otherUserIds = await sqlRaw`SELECT id FROM users WHERE email NOT IN ('stephaniegow93@gmail.com', 'denzel.rooke23@gmail.com')`;
-    for (const user of otherUserIds) {
-      await sqlRaw`DELETE FROM users WHERE id = ${user.id}`;
-    }
+    // Delete any user except stephaniegow93 and denzelrooke
+    await sqlRaw`DELETE FROM users WHERE email NOT IN ('stephaniegow93@gmail.com', 'denzel.rooke23@gmail.com')`;
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Database cleared. Kept users: stephaniegow93, denzelrooke',
-      keptUsers: ['stephaniegow93@gmail.com', 'denzel.rooke23@gmail.com']
+      message: 'Database cleared. Kept: stephaniegow93@gmail.com, denzel.rooke23@gmail.com'
     });
   } catch (error: any) {
     console.error('Cleanup error:', error);
