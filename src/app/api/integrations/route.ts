@@ -58,9 +58,8 @@ export async function GET(request: Request) {
       const scopes = 'pages_manage_posts,pages_read_engagement,public_profile';
       authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&scope=${scopes}&state=${userId}`;
     } else if (provider === 'canva') {
-      // Canva OAuth 2.0 with PKCE - redirect to Canva authorization page
-      // Use scopes as shown in Canva docs
-      const scopes = 'design:content:read design:content:write design:meta:read';
+      // Canva OAuth 2.0 with PKCE - use minimal scopes
+      const scopes = 'design:meta:read';
       // Generate PKCE code verifier and challenge
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
