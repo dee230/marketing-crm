@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     });
     
     const createResult = await createRes.json();
+    console.log('Canva create design:', JSON.stringify(createResult));
     
     if (!createRes.ok) {
       console.error('Canva create design error:', createResult);

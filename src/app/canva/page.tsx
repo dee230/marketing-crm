@@ -141,7 +141,8 @@ function CanvaPageContent() {
         setShowCreateModal(false);
         setNewDesignTitle('');
       } else {
-        alert('Failed to create design: ' + (data.error || 'Unknown error'));
+        const errMsg = data.details?.message || data.error || 'Unknown error';
+        alert('Failed to create design: ' + errMsg);
       }
     } catch (err) {
       console.error('Failed to create design:', err);
