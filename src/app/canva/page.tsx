@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface Design {
   id: string;
@@ -26,6 +27,7 @@ interface Integration {
 }
 
 function CanvaPageContent() {
+  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [integration, setIntegration] = useState<Integration | null>(null);
@@ -51,6 +53,15 @@ function CanvaPageContent() {
   }, []);
 
   const fetchIntegration = async () => {
+    // Don't fetch if not logged in
+    if (status === 'unauthenticated') {
+      router.push('/sign-in');
+      return;
+    }
+    if (status === 'loading') {
+      return; // Wait for session to load
+    }
+    
     try {
       const res = await fetch('/api/integrations?action=status');
       const data = await res.json();
@@ -215,12 +226,26 @@ function CanvaPageContent() {
     });
   };
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: '#00C4CC' }}></div>
           <p style={{ color: '#9B9B8F' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to sign in if not authenticated
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p style={{ color: '#9B9B8F' }}>Please sign in to access Canva</p>
+          <Link href="/sign-in" className="mt-4 inline-block px-4 py-2 rounded" style={{ background: '#00C4CC', color: '#fff' }}>
+            Sign In
+          </Link>
         </div>
       </div>
     );
