@@ -120,18 +120,11 @@ function CanvaPageContent() {
     }
   };
 
-  const handleCreateDesign = async () => {
-    setCreating(true);
-    try {
-      // Open Canva directly - no API call needed
-      window.open('https://www.canva.com/design', '_blank');
-      setShowCreateModal(false);
-      setNewDesignTitle('');
-    } catch (err) {
-      console.error('Failed to create design:', err);
-    } finally {
-      setCreating(false);
-    }
+  const handleCreateDesign = () => {
+    // Open Canva directly - no API call needed
+    window.open('https://www.canva.com/design', '_blank');
+    setShowCreateModal(false);
+    setNewDesignTitle('');
   };
 
   const handleExport = async () => {
@@ -485,11 +478,10 @@ function CanvaPageContent() {
               </button>
               <button
                 onClick={handleCreateDesign}
-                disabled={creating}
                 className="flex-1 px-4 py-2 rounded-lg font-medium"
                 style={{ background: '#00C4CC', color: '#fff' }}
               >
-                {creating ? 'Creating...' : 'Create'}
+                Create
               </button>
             </div>
           </div>
