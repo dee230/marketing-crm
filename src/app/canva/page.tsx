@@ -123,27 +123,10 @@ function CanvaPageContent() {
   const handleCreateDesign = async () => {
     setCreating(true);
     try {
-      const res = await fetch('/api/canva/designs/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newDesignTitle || undefined,
-          designType: newDesignType,
-        }),
-      });
-      const data = await res.json();
-      if (data.design) {
-        // Open the design in Canva editor
-        if (data.design.urls?.edit_url) {
-          window.open(data.design.urls.edit_url, '_blank');
-        }
-        fetchDesigns();
-        setShowCreateModal(false);
-        setNewDesignTitle('');
-      } else {
-        const errMsg = data.details?.message || data.error || 'Unknown error';
-        alert('Failed to create design: ' + errMsg);
-      }
+      // Open Canva directly - no API call needed
+      window.open('https://www.canva.com/design', '_blank');
+      setShowCreateModal(false);
+      setNewDesignTitle('');
     } catch (err) {
       console.error('Failed to create design:', err);
     } finally {
