@@ -11,10 +11,14 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   const stateParam = searchParams.get('state'); // userId|codeVerifier
   const error = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
   
-  if (error) {
-    console.error('Canva auth error:', error);
-    return NextResponse.redirect(new URL(`/canva?error=canva_auth_failed&details=${error}`, request.url));
+  console.log('Canva callback:', { code: !!code, state: stateParam?.substring(0, 20), error, errorDescription });
+  
+  if (error || errorDescription) {
+    console.error('Canva auth error:', error, errorDescription);
+    const errMsg = error || errorDescription;
+    return NextResponse.redirect(new URL(`/canva?error=canva_auth_failed&details=${encodeURIComponent(errMsg)}`, request.url));
   }
   
   if (!code || !stateParam) {
