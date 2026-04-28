@@ -59,6 +59,7 @@ export async function GET(request: Request) {
       authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&scope=${scopes}&state=${userId}`;
     } else if (provider === 'canva') {
       // Canva OAuth 2.0 with PKCE - redirect to Canva authorization page
+      // Use scopes as shown in Canva docs
       const scopes = 'design:content:read design:content:write design:meta:read';
       // Generate PKCE code verifier and challenge
       const codeVerifier = generateCodeVerifier();
@@ -67,7 +68,19 @@ export async function GET(request: Request) {
       // Encode code_verifier in state (userId|codeVerifier)
       const state = `${userId}|${codeVerifier}`;
       
-      authUrl = `https://www.canva.com/api/oauth/authorize?response_type=code&client_id=${CANVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(CANVA_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${encodeURIComponent(state)}`;
+      // Build auth URL - ensure proper URL encoding
+      const authUrlBase = `https://www.canva.com/api/oauth/authorize`;
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: CANVA_CLIENT_ID!,
+        redirect_uri: CANVA_REDIRECT_URI!,
+        scope: scopes,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+        state: state,
+      });
+      
+      const authUrl = `${authUrlBase}?${params.toString()}`;
       
       return NextResponse.json({ authUrl, provider: 'canva' });
     } else {
