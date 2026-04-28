@@ -23,6 +23,7 @@ export function SidebarNav({ currentPath, userRole }: SidebarNavProps) {
     if (path === '/reports' && currentPath?.startsWith('/reports')) return true;
     if (path === '/admin/password-resets' && currentPath?.startsWith('/admin/password-resets')) return true;
     if (path === '/admin/audit-logs' && currentPath?.startsWith('/admin/audit-logs')) return true;
+    if (path === '/canva' && currentPath?.startsWith('/canva')) return true;
     return false;
   };
 
@@ -152,17 +153,28 @@ export function SidebarNav({ currentPath, userRole }: SidebarNavProps) {
         </Link>
       )}
 
-      <Link 
-        href="/settings" 
-        className="sidebar-link"
-        style={isActive('/settings') ? { background: 'rgba(224, 122, 95, 0.1)', color: '#E07A5F' } : undefined}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.773 1.832c1.402.566 2.633 1.452 3.07 2.346l.246.328c.713.998 1.41 1.997 1.705 3.072.17.616.17 1.237-.174 1.79a2.987 2.987 0 01-1.273 1.273c-.553-.17-1.174-.344-1.79-.174-.899.238-1.833.768-2.961 1.123l-.328.246a1.724 1.724 0 01-2.132.47c-.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 012.773-1.832c.566 1.402 1.452 2.633 2.346 3.07l.328.246c.998.713 1.997 1.41 3.072 1.705.616.17 1.237.17 1.79-.174a2.987 2.987 0 011.273-1.273c-.553.17-1.174.344-1.79.174-.899-.238-1.833-.768-2.961-1.123l-.328-.246a1.724 1.724 0 01-.47-2.132c.426-.756 2.924-1.756 3.35 0a1.724 1.724 0 01-1.832 2.773c-1.402-.566-2.633-1.452-3.07-2.346l-.246-.328c-.713-.998-1.41-1.997-1.705-3.072-.17-.616-.17-1.237.174-1.79a2.987 2.987 0 011.273-1.273c.553.17 1.174.344 1.79.174.899.238 1.833.768 2.961 1.123l.328.246a1.724 1.724 0 012.132.47c.756-.426 1.756-2.924 0-3.35a1.724 1.724 0 01-2.773-1.832z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        Settings
-      </Link>
-    </nav>
+<Link 
+          href="/settings" 
+          className="sidebar-link"
+          style={isActive('/settings') ? { background: 'rgba(224, 122, 95, 0.1)', color: '#E07A5F' } : undefined}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.773 1.832c1.402.566 2.633 1.452 3.07 2.346l.246.328c.713.998 1.41 1.997 1.705 3.072.17.616.17 1.237-.174 1.79a2.987 2.987 0 01-1.273 1.273c-.553-.17-1.174-.344-1.79-.174-.899.238-1.833.768-2.961 1.123l-.328.246a1.724 1.724 0 01-2.132.47c-.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 012.773-1.832c.566 1.402 1.452 2.633 2.346 3.07l.328.246c.998.713 1.997 1.41 3.072 1.705.616.17 1.237.17 1.79-.174a2.987 2.987 0 011.273-1.273c-.553.17-1.174.344-1.79.174-.899-.238-1.833-.768-2.961-1.123l-.328-.246a1.724 1.724 0 01-.47-2.132c.426-.756 2.924-1.756 3.35 0a1.724 1.724 0 01-1.832 2.773c-1.402-.566-2.633-1.452-3.07-2.346l-.246-.328c-.713-.998-1.41-1.997-1.705-3.072-.17-.616-.17-1.237.174-1.79a2.987 2.987 0 011.273-1.273c.553.17 1.174.344 1.79.174.899.238 1.833.768 2.961 1.123l.328.246a1.724 1.724 0 012.132.47c.756-.426 1.756-2.924 0-3.35a1.724 1.724 0 01-2.773-1.832z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Settings
+        </Link>
+
+        <Link 
+          href="/canva" 
+          className="sidebar-link"
+          style={isActive('/canva') ? { background: 'rgba(0, 196, 204, 0.1)', color: '#00C4CC' } : undefined}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Canva
+        </Link>
+      </nav>
   );
 }

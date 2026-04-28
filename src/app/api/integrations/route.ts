@@ -58,8 +58,18 @@ export async function GET(request: Request) {
       const scopes = 'pages_manage_posts,pages_read_engagement,public_profile';
       authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&scope=${scopes}&state=${userId}`;
     } else if (provider === 'canva') {
+      // Canva OAuth 2.0 with PKCE - redirect to Canva authorization page
       const scopes = 'design:content:read design:content:write design:meta:read';
-      authUrl = `https://www.canva.com/api/oauth/authorize?response_type=code&client_id=${CANVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(CANVA_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${userId}`;
+      // Generate PKCE code verifier and challenge
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      
+      // Encode code_verifier in state (userId|codeVerifier)
+      const state = `${userId}|${codeVerifier}`;
+      
+      authUrl = `https://www.canva.com/api/oauth/authorize?response_type=code&client_id=${CANVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(CANVA_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${encodeURIComponent(state)}`;
+      
+      return NextResponse.json({ authUrl, provider: 'canva' });
     } else {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }
@@ -184,10 +194,36 @@ export async function POST(request: Request) {
       page_name = ${pageName || null},
       company_id = ${companyId || null},
       company_name = ${companyName || null},
-      canva_folder_id = ${canvaFolderId || null},
+canva_folder_id = ${canvaFolderId || null},
       status = 'connected',
       updated_at = ${now}
-  `;
-  
+   `;
+   
   return NextResponse.json({ success: true });
+}
+
+// PKCE Helper functions for Canva OAuth
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+function base64UrlEncode(buffer: Uint8Array): string {
+  let binary = '';
+  const len = buffer.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(buffer[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }

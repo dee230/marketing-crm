@@ -9,15 +9,34 @@ const CANVA_REDIRECT_URI = process.env.CANVA_REDIRECT_URI || 'http://localhost:3
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const state = searchParams.get('state'); // userId
+  const stateParam = searchParams.get('state'); // userId|codeVerifier
+  const error = searchParams.get('error');
   
-  if (!code || !state) {
-    return NextResponse.redirect(new URL('/settings?error=canva_auth_failed', request.url));
+  if (error) {
+    console.error('Canva auth error:', error);
+    return NextResponse.redirect(new URL(`/canva?error=canva_auth_failed&details=${error}`, request.url));
+  }
+  
+  if (!code || !stateParam) {
+    return NextResponse.redirect(new URL('/canva?error=canva_auth_failed', request.url));
+  }
+  
+  // Parse state: userId|codeVerifier
+  let userId = stateParam;
+  let codeVerifier = '';
+  if (stateParam.includes('|')) {
+    const parts = stateParam.split('|');
+    userId = parts[0];
+    codeVerifier = parts[1];
+  }
+  
+  if (!codeVerifier) {
+    return NextResponse.redirect(new URL('/canva?error=canva_missing_verifier', request.url));
   }
   
   try {
-    // Exchange code for access token
-    const tokenUrl = `https://www.canva.com/api/v1/oauth/token`;
+    // Exchange code for access token with PKCE
+    const tokenUrl = 'https://api.canva.com/rest/v1/oauth/token';
     
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
@@ -25,34 +44,44 @@ export async function GET(request: Request) {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${Buffer.from(`${CANVA_CLIENT_ID}:${CANVA_CLIENT_SECRET}`).toString('base64')}`,
       },
-      body: `grant_type=authorization_code&code=${code}&redirect_uri=${encodeURIComponent(CANVA_REDIRECT_URI)}`,
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code_verifier: codeVerifier,
+        code: code,
+        redirect_uri: CANVA_REDIRECT_URI,
+      }),
     });
     
     const tokenData = await tokenRes.json();
     
     if (!tokenData.access_token) {
       console.error('Canva token error:', tokenData);
-      return NextResponse.redirect(new URL('/settings?error=canva_token_failed', request.url));
+      return NextResponse.redirect(new URL(`/canva?error=canva_token_failed`, request.url));
     }
     
     const accessToken = tokenData.access_token;
     const refreshToken = tokenData.refresh_token || '';
-    const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+    const expiresIn = tokenData.expires_in || 3600;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
     const now = new Date().toISOString();
     
-    // Get user's folders
-    const foldersUrl = 'https://api.canva.com/rest/v1/folders';
-    const foldersRes = await fetch(foldersUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-    const foldersData = await foldersRes.json();
+    // Get user's folder (to store as default folder)
+    let canvaFolderId = null;
+    try {
+      const foldersUrl = 'https://api.canva.com/rest/v1/folders?parent_folder_id=root&limit=10';
+      const foldersRes = await fetch(foldersUrl, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+      const foldersData = await foldersRes.json();
+      canvaFolderId = foldersData.items?.[0]?.id || null;
+    } catch (e) {
+      console.error('Canva folders error:', e);
+    }
     
-    const canvaFolderId = foldersData.items?.[0]?.id || null;
-    
-    // Upsert integration
+    // Upsert integration with PKCE tokens
     await sqlRaw`
       INSERT INTO integrations (id, user_id, provider, access_token, refresh_token, access_token_expires_at, canva_folder_id, status, created_at, updated_at)
-      VALUES (${nanoid()}, ${state}, 'canva', ${accessToken}, ${refreshToken}, ${expiresAt}, ${canvaFolderId}, 'connected', ${now}, ${now})
+      VALUES (${nanoid()}, ${userId}, 'canva', ${accessToken}, ${refreshToken}, ${expiresAt}, ${canvaFolderId}, 'connected', ${now}, ${now})
       ON CONFLICT (user_id, provider) DO UPDATE SET
         access_token = ${accessToken},
         refresh_token = ${refreshToken},
@@ -62,9 +91,9 @@ export async function GET(request: Request) {
         updated_at = ${now}
     `;
     
-    return NextResponse.redirect(new URL('/settings?success=canva', request.url));
+    return NextResponse.redirect(new URL('/canva?success=connected', request.url));
   } catch (error) {
     console.error('Canva callback error:', error);
-    return NextResponse.redirect(new URL('/settings?error=canva_error', request.url));
+    return NextResponse.redirect(new URL(`/canva?error=canva_error`, request.url));
   }
 }
