@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface Design {
@@ -27,7 +27,6 @@ interface Integration {
 
 function CanvaPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [integration, setIntegration] = useState<Integration | null>(null);
   const [designs, setDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +38,7 @@ function CanvaPageContent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newDesignTitle, setNewDesignTitle] = useState('');
-  const [newDesignType, setNewDesignType] = useState('poster');
+  const [newDesignType, setNewDesignType] = useState('POSTER');
   const [exportFormat, setExportFormat] = useState('pdf');
   const [exportStatus, setExportStatus] = useState<Record<string, string>>({});
 
@@ -121,8 +120,12 @@ function CanvaPageContent() {
   };
 
   const handleCreateDesign = () => {
-    // Open Canva main site - works without special scopes
+    // Use Canva embed (works without API key)
+    const embedUrl = `https://www.canva.com/_partnership/embed?action=createDesign&type=${newDesignType}&embed=true&apiMode=button`;
+    
+    // Open in a new window/tab since embeds require special access
     window.open('https://www.canva.com/', '_blank');
+    
     setShowCreateModal(false);
     setNewDesignTitle('');
   };
@@ -459,12 +462,13 @@ function CanvaPageContent() {
                 className="w-full px-3 py-2 rounded-lg border"
                 style={{ borderColor: '#E8E4DD' }}
               >
-                <option value="poster">Poster</option>
-                <option value="presentation">Presentation</option>
-                <option value="social_media">Social Media</option>
-                <option value="doc">Document</option>
-                <option value="video">Video</option>
-                <option value="print">Print</option>
+                <option value="POSTER">Poster</option>
+                <option value="PRESENTATION">Presentation</option>
+                <option value="SOCIAL_MEDIA">Social Media</option>
+                <option value="DOC">Document</option>
+                <option value="VIDEO">Video</option>
+                <option value="EMAIL">Email</option>
+                <option value="WHITEBOARD">Whiteboard</option>
               </select>
             </div>
             
