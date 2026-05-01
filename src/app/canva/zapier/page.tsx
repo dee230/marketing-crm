@@ -88,7 +88,7 @@ function ZapierSetupContent() {
               Step 4: Test & Activate
             </h2>
             <ol className="list-decimal list-inside space-y-3" style={{ color: '#666' }}>
-              <li>Click <strong>"Test & Review"</strong> - you should see <code style={{ color: 'green' }}>{"success": true}</code></li>
+              <li>Click <strong>"Test & Review"</strong> - you should see <code style={{ color: '#10b981' }}>success: true</code></li>
               <li>Click <strong>"Turn On Zap"</strong></li>
             </ol>
           </div>
