@@ -253,3 +253,24 @@ export const integrationsRelations = relations(integrations, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Canva designs synced from Zapier
+export const canvaDesigns = pgTable('canva_designs', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  canvaDesignId: text('canva_design_id').notNull(),
+  title: text('title'),
+  designUrl: text('design_url'),
+  thumbnailUrl: text('thumbnail_url'),
+  exportUrl: text('export_url'),
+  status: text('status').notNull().default('active'), // 'active', 'archived'
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
+});
+
+export const canvaDesignsRelations = relations(canvaDesigns, ({ one }) => ({
+  user: one(users, {
+    fields: [canvaDesigns.userId],
+    references: [users.id],
+  }),
+}));
