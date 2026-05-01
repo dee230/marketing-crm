@@ -41,6 +41,12 @@ function CanvaPageContent() {
   const [newDesignType, setNewDesignType] = useState('POSTER');
   const [exportFormat, setExportFormat] = useState('pdf');
   const [exportStatus, setExportStatus] = useState<Record<string, string>>({});
+  
+  // Manual sync modal
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncDesignUrl, setSyncDesignUrl] = useState('');
+  const [syncDesignName, setSyncDesignName] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   const success = searchParams.get('success');
   const error = searchParams.get('error');
@@ -56,6 +62,7 @@ function CanvaPageContent() {
       setIntegration(data.canva);
       if (data.canva?.status === 'connected') {
         fetchDesigns();
+        fetchZappedDesigns(); // Also fetch manually synced designs
       }
     } catch (err) {
       console.error('Failed to fetch integration:', err);
@@ -124,6 +131,71 @@ function CanvaPageContent() {
     window.open('https://www.canva.com/', '_blank');
     setShowCreateModal(false);
     setNewDesignTitle('');
+  };
+
+  // Manual sync design from Canva URL
+  const handleSyncDesign = async () => {
+    if (!syncDesignUrl) {
+      alert('Please enter a Canva design URL');
+      return;
+    }
+    
+    setSyncing(true);
+    try {
+      // Extract design ID from URL if possible
+      let designId = syncDesignUrl;
+      let designUrl = syncDesignUrl;
+      
+      // Try to extract design ID from URL patterns
+      // e.g., https://www.canva.com/design/DAFabc123/edit
+      const match = syncDesignUrl.match(/canva\.com\/(?:design\/|view\/)([A-Za-z0-9_-]+)/);
+      if (match) {
+        designId = match[1];
+        designUrl = `https://www.canva.com/design/${designId}`;
+      }
+      
+      const res = await fetch('/api/canva/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          designId: designId,
+          designName: syncDesignName || designId,
+          designUrl: designUrl,
+          thumbnailUrl: `https://www.canva.com/_api/design-thumbnail/${designId}`,
+          exportUrl: `https://www.canva.com/_api/export/${designId}`,
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert('Design synced successfully!');
+        setShowSyncModal(false);
+        setSyncDesignUrl('');
+        setSyncDesignName('');
+        // Refresh designs list
+        fetchZappedDesigns();
+      } else {
+        alert('Failed to sync: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to sync design:', err);
+      alert('Failed to sync design');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Fetch designs from webhook storage
+  const fetchZappedDesigns = async () => {
+    try {
+      const res = await fetch('/api/canva/webhook');
+      const data = await res.json();
+      if (data.designs) {
+        setDesigns(data.designs);
+      }
+    } catch (err) {
+      console.error('Failed to fetch zapped designs:', err);
+    }
   };
 
   const handleExport = async () => {
@@ -265,6 +337,13 @@ function CanvaPageContent() {
                 >
                   Set up Zapier →
                 </Link>
+                <button
+                  onClick={() => setShowSyncModal(true)}
+                  className="text-sm px-4 py-2 rounded"
+                  style={{ background: '#10b981', color: '#fff' }}
+                >
+                  + Sync Design
+                </button>
               </div>
             )}
           </div>
@@ -542,6 +621,68 @@ function CanvaPageContent() {
                 style={{ background: '#00C4CC', color: '#fff' }}
               >
                 {exporting ? 'Exporting...' : 'Export'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Design Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4" style={{ color: '#2D2A26' }}>
+              Sync Design from Canva
+            </h2>
+            
+            <p className="text-sm mb-4" style={{ color: '#666' }}>
+              Enter the URL of your Canva design to sync it to the CRM. 
+              You can find this in Canva by clicking "Share" → "Copy link"
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1" style={{ color: '#2D2A26' }}>
+                Canva Design URL
+              </label>
+              <input
+                type="text"
+                value={syncDesignUrl}
+                onChange={(e) => setSyncDesignUrl(e.target.value)}
+                placeholder="https://www.canva.com/design/..."
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{ borderColor: '#E8E4DD' }}
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1" style={{ color: '#2D2A26' }}>
+                Design Name (optional)
+              </label>
+              <input
+                type="text"
+                value={syncDesignName}
+                onChange={(e) => setSyncDesignName(e.target.value)}
+                placeholder="My Canva Design"
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{ borderColor: '#E8E4DD' }}
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSyncModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg"
+                style={{ border: '1px solid #E8E4DD' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSyncDesign}
+                disabled={syncing}
+                className="flex-1 px-4 py-2 rounded-lg font-medium"
+                style={{ background: '#10b981', color: '#fff' }}
+              >
+                {syncing ? 'Syncing...' : 'Sync'}
               </button>
             </div>
           </div>
