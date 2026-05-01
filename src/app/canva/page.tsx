@@ -120,12 +120,8 @@ function CanvaPageContent() {
   };
 
   const handleCreateDesign = () => {
-    // Use Canva embed (works without API key)
-    const embedUrl = `https://www.canva.com/_partnership/embed?action=createDesign&type=${newDesignType}&embed=true&apiMode=button`;
-    
-    // Open in a new window/tab since embeds require special access
+    // Open Canva for users to design - they know Canva already
     window.open('https://www.canva.com/', '_blank');
-    
     setShowCreateModal(false);
     setNewDesignTitle('');
   };
@@ -468,7 +464,6 @@ function CanvaPageContent() {
                 <option value="DOC">Document</option>
                 <option value="VIDEO">Video</option>
                 <option value="EMAIL">Email</option>
-                <option value="WHITEBOARD">Whiteboard</option>
               </select>
             </div>
             
