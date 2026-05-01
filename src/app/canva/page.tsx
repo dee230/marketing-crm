@@ -249,14 +249,23 @@ function CanvaPageContent() {
               </Link>
             </div>
             {integration?.status === 'connected' && (
-              <button
-                onClick={handleDisconnect}
-                disabled={connecting}
-                className="text-sm px-4 py-2 rounded"
-                style={{ color: '#dc2626', border: '1px solid #dc2626' }}
-              >
-                {connecting ? 'Disconnecting...' : 'Disconnect'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDisconnect}
+                  disabled={connecting}
+                  className="text-sm px-4 py-2 rounded"
+                  style={{ color: '#dc2626', border: '1px solid #dc2626' }}
+                >
+                  {connecting ? 'Disconnecting...' : 'Disconnect'}
+                </button>
+                <Link
+                  href="/canva/zapier"
+                  className="text-sm px-4 py-2 rounded"
+                  style={{ background: '#00C4CC', color: '#fff' }}
+                >
+                  Set up Zapier →
+                </Link>
+              </div>
             )}
           </div>
 
