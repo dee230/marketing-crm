@@ -121,8 +121,8 @@ function CanvaPageContent() {
   };
 
   const handleCreateDesign = () => {
-    // Open Canva directly - no API call needed
-    window.open('https://www.canva.com/design', '_blank');
+    // Open Canva main site - works without special scopes
+    window.open('https://www.canva.com/', '_blank');
     setShowCreateModal(false);
     setNewDesignTitle('');
   };
