@@ -339,11 +339,11 @@ function CanvaPageContent() {
                   {connecting ? 'Disconnecting...' : 'Disconnect'}
                 </button>
                 <Link
-                  href="/canva/zapier"
+                  href="/canva/make"
                   className="text-sm px-4 py-2 rounded"
                   style={{ background: '#00C4CC', color: '#fff' }}
                 >
-                  Set up Zapier →
+                  Set up Make →
                 </Link>
                 <button
                   onClick={() => setShowSyncModal(true)}
