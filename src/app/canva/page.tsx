@@ -187,10 +187,14 @@ function CanvaPageContent() {
 
   // Fetch designs from webhook storage
   const fetchZappedDesigns = async () => {
+    console.log('Fetching zapped designs...');
     try {
       const res = await fetch('/api/canva/webhook');
+      console.log('Webhook response status:', res.status);
       const data = await res.json();
+      console.log('Webhook data:', data);
       if (data.designs) {
+        console.log('Setting designs:', data.designs.length);
         setDesigns(data.designs);
       }
     } catch (err) {
@@ -277,16 +281,19 @@ function CanvaPageContent() {
     const viewUrl = design.urls?.view_url;
     
     console.log('Edit URL:', editUrl);
+    console.log('Design URL:', design.design_url);
     
     if (editUrl) {
       window.open(editUrl, '_blank');
     } else if (viewUrl) {
       window.open(viewUrl, '_blank');
     } else if (design.design_url) {
-      // Fallback to direct URL
+      // Fallback to direct URL - this should work
+      console.log('Opening design_url:', design.design_url);
       window.open(design.design_url, '_blank');
     } else {
-      alert('No URL found for this design. Design data: ' + JSON.stringify(design));
+      alert('No URL found! Open browser console (F12) to see design data.');
+      console.log('Full design object:', design);
     }
   };
 
