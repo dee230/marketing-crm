@@ -275,25 +275,14 @@ function CanvaPageContent() {
   };
 
   const openInCanva = (design: any) => {
-    console.log('Opening design:', design);
-    // Support both API designs (design.urls) and synced designs (design_url)
-    const editUrl = design.urls?.edit_url || design.design_url;
-    const viewUrl = design.urls?.view_url;
-    
-    console.log('Edit URL:', editUrl);
-    console.log('Design URL:', design.design_url);
-    
-    if (editUrl) {
-      window.open(editUrl, '_blank');
-    } else if (viewUrl) {
-      window.open(viewUrl, '_blank');
-    } else if (design.design_url) {
-      // Fallback to direct URL - this should work
-      console.log('Opening design_url:', design.design_url);
+    // Always use design_url directly - simplest approach
+    if (design.design_url) {
+      console.log('Opening:', design.design_url);
       window.open(design.design_url, '_blank');
+    } else if (design.urls?.edit_url) {
+      window.open(design.urls.edit_url, '_blank');
     } else {
-      alert('No URL found! Open browser console (F12) to see design data.');
-      console.log('Full design object:', design);
+      alert('No URL available for this design');
     }
   };
 
