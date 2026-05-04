@@ -271,9 +271,12 @@ function CanvaPageContent() {
   };
 
   const openInCanva = (design: any) => {
+    console.log('Opening design:', design);
     // Support both API designs (design.urls) and synced designs (design_url)
     const editUrl = design.urls?.edit_url || design.design_url;
     const viewUrl = design.urls?.view_url;
+    
+    console.log('Edit URL:', editUrl);
     
     if (editUrl) {
       window.open(editUrl, '_blank');
@@ -282,6 +285,8 @@ function CanvaPageContent() {
     } else if (design.design_url) {
       // Fallback to direct URL
       window.open(design.design_url, '_blank');
+    } else {
+      alert('No URL found for this design. Design data: ' + JSON.stringify(design));
     }
   };
 
