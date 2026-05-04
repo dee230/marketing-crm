@@ -270,11 +270,18 @@ function CanvaPageContent() {
     }
   };
 
-  const openInCanva = (design: Design) => {
-    if (design.urls?.edit_url) {
-      window.open(design.urls.edit_url, '_blank');
-    } else if (design.urls?.view_url) {
-      window.open(design.urls.view_url, '_blank');
+  const openInCanva = (design: any) => {
+    // Support both API designs (design.urls) and synced designs (design_url)
+    const editUrl = design.urls?.edit_url || design.design_url;
+    const viewUrl = design.urls?.view_url;
+    
+    if (editUrl) {
+      window.open(editUrl, '_blank');
+    } else if (viewUrl) {
+      window.open(viewUrl, '_blank');
+    } else if (design.design_url) {
+      // Fallback to direct URL
+      window.open(design.design_url, '_blank');
     }
   };
 
@@ -440,11 +447,16 @@ function CanvaPageContent() {
                     >
                       {/* Thumbnail */}
                       <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
-                        {design.thumbnail?.url ? (
+                        {/* Support both API designs and synced designs */}
+                        {(design.thumbnail?.url || design.thumbnail_url) ? (
                           <img
-                            src={design.thumbnail.url}
+                            src={design.thumbnail?.url || design.thumbnail_url}
                             alt={design.title}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Hide broken images
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full">
@@ -453,7 +465,7 @@ function CanvaPageContent() {
                             </svg>
                           </div>
                         )}
-                        {/* Page count badge */}
+                        {/* Page count badge - only for API designs */}
                         {design.page_count > 1 && (
                           <span className="absolute top-2 right-2 px-2 py-1 text-xs rounded" style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
                             {design.page_count} pages
