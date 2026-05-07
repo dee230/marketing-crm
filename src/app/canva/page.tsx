@@ -231,44 +231,47 @@ function CanvaPageContent() {
     }
   };
 
-  // Fetch designs from webhook storage
+  // Fetch designs from webhook storage (initial load)
   const fetchZappedDesigns = async () => {
     console.log('Fetching zapped designs...');
     try {
       const res = await fetch('/api/canva/webhook');
       console.log('Webhook response status:', res.status);
       const data = await res.json();
-      let designs = data.designs || [];
+      const designs = data.designs || [];
       console.log('Webhook designs:', designs.length);
 
-      // Cross-reference with Canva API to detect deleted designs
-      try {
-        const canvaRes = await fetch('/api/canva/designs?limit=200');
-        if (canvaRes.ok) {
-          const canvaData = await canvaRes.json();
-          const canvaIds = new Set((canvaData.items || []).map((d: any) => d.id));
-          
-          const before = designs.length;
-          designs = designs.filter((d: any) => !d.canva_design_id || canvaIds.has(d.canva_design_id));
-          const removed = before - designs.length;
-          if (removed > 0) {
-            console.log(`Removed ${removed} design(s) deleted from Canva`);
-          }
-        }
-      } catch (err) {
-        console.log('Canva sync check skipped (API unavailable):', err);
-      }
-
       if (designs.length > 0) {
-        console.log('Setting designs:', designs.length);
         setDesigns(designs);
-        // Also save full list for search
         window.__allDesigns = [...designs];
-        // Clear search query if designs were refreshed
         setSearchQuery('');
       }
     } catch (err) {
       console.error('Failed to fetch zapped designs:', err);
+    }
+  };
+
+  // Full sync with Canva: import new, archive deleted
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/canva/sync', { method: 'POST' });
+      const data = await res.json();
+      
+      if (data.success && data.designs) {
+        console.log(`Sync done: +${data.stats.imported} new, -${data.stats.archived} deleted, ${data.stats.total} total`);
+        setDesigns(data.designs);
+        window.__allDesigns = [...data.designs];
+        setSearchQuery('');
+      } else {
+        console.warn('Sync failed, falling back to webhook');
+        await fetchZappedDesigns();
+      }
+    } catch (err) {
+      console.error('Sync error, falling back to webhook:', err);
+      await fetchZappedDesigns();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -566,11 +569,7 @@ function CanvaPageContent() {
                   Search
                 </button>
                 <button
-                  onClick={async () => {
-                    setRefreshing(true);
-                    await fetchZappedDesigns();
-                    setRefreshing(false);
-                  }}
+                  onClick={handleRefresh}
                   disabled={refreshing}
                   className="px-4 py-2 rounded-lg flex items-center gap-2"
                   style={{ border: '1px solid #E8E4DD', background: '#fff' }}
