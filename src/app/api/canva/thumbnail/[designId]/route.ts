@@ -5,9 +5,9 @@ const CANVA_API_BASE = 'https://api.canva.com/rest/v1';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { designId: string } }
+  context: { params: Promise<{ designId: string }> }
 ) {
-  const { designId } = params;
+  const { designId } = await context.params;
   
   if (!designId) {
     return NextResponse.json({ error: 'Missing designId' }, { status: 400 });
