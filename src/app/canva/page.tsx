@@ -264,7 +264,8 @@ function CanvaPageContent() {
         window.__allDesigns = [...data.designs];
         setSearchQuery('');
       } else {
-        console.warn('Sync failed, falling back to webhook');
+        console.warn('Sync endpoint returned:', data.error || 'unknown error', `(status ${res.status})`);
+        // Fall back to webhook
         await fetchZappedDesigns();
       }
     } catch (err) {

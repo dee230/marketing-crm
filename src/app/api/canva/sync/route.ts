@@ -1,29 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
 import { sqlRaw } from '@/db';
 import { nanoid } from 'nanoid';
 
 const CANVA_API_BASE = 'https://api.canva.com/rest/v1';
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const userId = (session.user as any)?.id;
-  if (!userId) {
-    return NextResponse.json({ error: 'No user ID' }, { status: 400 });
-  }
-
-  // Get Canva integration
+  // Find the first connected Canva integration (don't require session)
   const integrations = await sqlRaw`
-    SELECT * FROM integrations WHERE user_id = ${userId} AND provider = 'canva' AND status = 'connected' LIMIT 1
+    SELECT * FROM integrations WHERE provider = 'canva' AND status = 'connected' LIMIT 1
   `;
 
   const integration = integrations[0];
   if (!integration) {
     return NextResponse.json({ error: 'Canva not connected' }, { status: 400 });
+  }
+
+  const userId = integration.user_id;
+  if (!userId) {
+    return NextResponse.json({ error: 'Integration has no user_id' }, { status: 400 });
   }
 
   // Refresh token if needed
