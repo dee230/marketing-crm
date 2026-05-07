@@ -529,13 +529,21 @@ function CanvaPageContent() {
                         
                         {/* Actions */}
                         <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => openInCanva(design)}
-                            className="flex-1 px-2 py-1 text-xs rounded"
-                            style={{ background: '#00C4CC', color: '#fff' }}
+                          <a
+                            href={design.design_url || design.designUrl || design.urls?.edit_url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 px-2 py-1 text-xs rounded text-center no-underline"
+                            style={{ background: '#00C4CC', color: '#fff', display: 'block', textDecoration: 'none' }}
+                            onClick={(e) => {
+                              if (!design.design_url && !design.designUrl && !design.urls?.edit_url) {
+                                e.preventDefault();
+                                openInCanva(design);
+                              }
+                            }}
                           >
                             Edit
-                          </button>
+                          </a>
                           <button
                             onClick={() => {
                               setSelectedDesign(design);

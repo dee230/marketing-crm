@@ -58,9 +58,12 @@ export async function GET(request: Request) {
     
     const tokenData = await tokenRes.json();
     
+    console.log('Canva token response:', { status: tokenRes.status, data: tokenData });
+    
     if (!tokenData.access_token) {
       console.error('Canva token error:', tokenData);
-      return NextResponse.redirect(new URL(`/canva?error=canva_token_failed`, request.url));
+      const errMsg = tokenData.error?.message || tokenData.error_description || JSON.stringify(tokenData);
+      return NextResponse.redirect(new URL(`/canva?error=canva_token_failed&details=${encodeURIComponent(errMsg)}`, request.url));
     }
     
     const accessToken = tokenData.access_token;

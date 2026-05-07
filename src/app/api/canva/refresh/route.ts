@@ -48,9 +48,16 @@ export async function POST(request: Request) {
     
     const tokenData = await tokenRes.json();
     
+    console.log('Canva token refresh response:', { status: tokenRes.status, data: tokenData });
+    
     if (!tokenData.access_token) {
       console.error('Canva refresh error:', tokenData);
-      return NextResponse.json({ error: 'Failed to refresh token', details: tokenData }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Failed to refresh token', 
+        details: tokenData,
+        hint: tokenData.error || 'Check Canva app credentials',
+        status: tokenRes.status
+      }, { status: 400 });
     }
     
     const newAccessToken = tokenData.access_token;
