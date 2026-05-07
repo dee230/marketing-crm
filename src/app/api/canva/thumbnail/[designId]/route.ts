@@ -40,25 +40,35 @@ export async function GET(
       accessToken = refreshed;
     }
     
-    // Fetch design from Canva API to get thumbnail
-    const designRes = await fetch(`${CANVA_API_BASE}/designs/${designId}`, {
+    // Fetch designs from Canva API (list endpoint returns thumbnails)
+    const designsRes = await fetch(`${CANVA_API_BASE}/designs?limit=50`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
       },
     });
     
-    if (!designRes.ok) {
-      const errorData = await designRes.json();
-      console.error('Canva design fetch error:', errorData);
-      return NextResponse.json({ error: 'Failed to fetch design', details: errorData }, { status: designRes.status });
+    if (!designsRes.ok) {
+      const errorData = await designsRes.json();
+      console.error('Canva designs fetch error:', errorData);
+      return NextResponse.json({ error: 'Failed to fetch designs', details: errorData }, { status: designsRes.status });
     }
     
-    const designData = await designRes.json();
+    const designsData = await designsRes.json();
+    console.log('Canva designs count:', designsData.items?.length);
     
-    // Get thumbnail URL from response
-    const thumbnailUrl = designData.thumbnail?.url || designData.urls?.thumbnail;
+    // Find the specific design by ID
+    const design = designsData.items?.find((d: any) => d.id === designId);
+    
+    if (!design) {
+      console.error('Design not found:', designId);
+      return NextResponse.json({ error: 'Design not found' }, { status: 404 });
+    }
+    
+    // Get thumbnail URL from design object
+    const thumbnailUrl = design.thumbnail?.url;
     
     if (!thumbnailUrl) {
+      console.error('No thumbnail in design:', design);
       return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 });
     }
     
