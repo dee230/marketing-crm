@@ -104,15 +104,20 @@ function CanvaPageContent() {
     try {
       const res = await fetch('/api/canva/designs');
       if (!res.ok) {
-        console.log('Canva API fetch failed (401 or other), showing webhook designs only');
-        return; // Don't update designs - keep webhook-stored ones
+        console.log('Canva API fetch failed (401 or other), falling back to webhook designs');
+        fetchZappedDesigns(); // Fall back to webhook-stored designs
+        return;
       }
       const data = await res.json();
-      if (data.designs) {
+      if (data.designs && data.designs.length > 0) {
         setDesigns(data.designs);
+      } else {
+        // API returned empty results, show webhook designs
+        fetchZappedDesigns();
       }
     } catch (err) {
       console.error('Failed to fetch designs:', err);
+      fetchZappedDesigns(); // Fall back to webhook designs on error
     }
   };
 
@@ -297,13 +302,22 @@ function CanvaPageContent() {
 
   const handleSearch = async () => {
     try {
-      const res = await fetch(`/api/canva/designs${searchQuery ? `&query=${encodeURIComponent(searchQuery)}` : ''}`);
+      const res = await fetch(`/api/canva/designs${searchQuery ? `?query=${encodeURIComponent(searchQuery)}` : ''}`);
+      if (!res.ok) {
+        console.log('Search API failed (401 or other), falling back to webhook designs');
+        fetchZappedDesigns();
+        return;
+      }
       const data = await res.json();
-      if (data.designs) {
+      if (data.designs && data.designs.length > 0) {
         setDesigns(data.designs);
+      } else {
+        // No results from API, show webhook designs
+        fetchZappedDesigns();
       }
     } catch (err) {
       console.error('Failed to search designs:', err);
+      fetchZappedDesigns();
     }
   };
 
@@ -503,9 +517,8 @@ function CanvaPageContent() {
                   {designs.map((design) => (
                     <div
                       key={design.id}
-                      className="rounded-lg border overflow-hidden cursor-pointer transition hover:shadow-md"
+                      className="rounded-lg border overflow-hidden transition hover:shadow-md"
                       style={{ borderColor: '#E8E4DD', background: '#fff' }}
-                      onClick={() => openInCanva(design)}
                     >
 {/* Thumbnail */}
                       <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
