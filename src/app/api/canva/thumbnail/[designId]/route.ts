@@ -14,7 +14,39 @@ export async function GET(
   }
   
   try {
-    // Get Canva integration (get the first connected one)
+    // STEP 1: Check if we have a stored thumbnail_url in our database (from webhook sync)
+    const storedDesigns = await sqlRaw`
+      SELECT thumbnail_url FROM canva_designs 
+      WHERE canva_design_id = ${designId} AND thumbnail_url IS NOT NULL
+      LIMIT 1
+    `;
+    
+    if (storedDesigns.length > 0 && storedDesigns[0].thumbnail_url) {
+      const storedThumbnail = storedDesigns[0].thumbnail_url;
+      console.log('Serving cached thumbnail for:', designId);
+      
+      // Try to fetch and proxy the stored thumbnail URL
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const imageRes = await fetch(storedThumbnail, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (imageRes.ok) {
+          const imageBuffer = await imageRes.arrayBuffer();
+          const contentType = imageRes.headers.get('content-type') || 'image/png';
+          return new NextResponse(imageBuffer, {
+            headers: {
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=900',
+            },
+          });
+        }
+      } catch (e) {
+        console.log('Cached thumbnail fetch failed, trying Canva API:', e.message);
+      }
+    }
+    
+    // STEP 2: Fall back to Canva API (needs integration)
     const integrations = await sqlRaw`
       SELECT * FROM integrations 
       WHERE provider = 'canva' AND status = 'connected'
@@ -32,7 +64,6 @@ export async function GET(
     const expiresAt = new Date(integration.access_token_expires_at);
     
     if (expiresAt <= new Date()) {
-      // Token expired, refresh it
       const refreshed = await refreshToken(integration.refresh_token, integration.user_id);
       if (!refreshed) {
         return NextResponse.json({ error: 'Failed to refresh token' }, { status: 401 });
@@ -40,7 +71,7 @@ export async function GET(
       accessToken = refreshed;
     }
     
-    // Fetch designs from Canva API (list endpoint returns thumbnails)
+    // Fetch designs from Canva API
     const designsRes = await fetch(`${CANVA_API_BASE}/designs?limit=50`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -56,15 +87,13 @@ export async function GET(
     const designsData = await designsRes.json();
     console.log('Canva designs count:', designsData.items?.length);
     
-    // Find the specific design by ID
     const design = designsData.items?.find((d: any) => d.id === designId);
     
     if (!design) {
-      console.error('Design not found:', designId);
+      console.error('Design not found in Canva API:', designId);
       return NextResponse.json({ error: 'Design not found' }, { status: 404 });
     }
     
-    // Get thumbnail URL from design object
     const thumbnailUrl = design.thumbnail?.url;
     
     if (!thumbnailUrl) {
@@ -72,7 +101,6 @@ export async function GET(
       return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 });
     }
     
-    // Fetch the actual thumbnail image
     const imageRes = await fetch(thumbnailUrl);
     
     if (!imageRes.ok) {
@@ -82,11 +110,10 @@ export async function GET(
     const imageBuffer = await imageRes.arrayBuffer();
     const contentType = imageRes.headers.get('content-type') || 'image/png';
     
-    // Return the image
     return new NextResponse(imageBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=900', // Cache for 15 minutes
+        'Cache-Control': 'public, max-age=900',
       },
     });
     
