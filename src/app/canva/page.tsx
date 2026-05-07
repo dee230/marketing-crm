@@ -6,18 +6,22 @@ import Link from 'next/link';
 
 interface Design {
   id: string;
+  canva_design_id?: string;
   title: string;
   thumbnail?: {
     url: string;
     width: number;
     height: number;
   };
+  thumbnail_url?: string;
+  design_url?: string;
+  export_url?: string;
   urls?: {
     edit_url: string;
     view_url: string;
   };
   page_count: number;
-  updated_at: number;
+  updated_at: string | number;
 }
 
 interface Integration {
@@ -74,6 +78,10 @@ function CanvaPageContent() {
   const fetchDesigns = async () => {
     try {
       const res = await fetch('/api/canva/designs');
+      if (!res.ok) {
+        console.log('Canva API fetch failed (401 or other), showing webhook designs only');
+        return; // Don't update designs - keep webhook-stored ones
+      }
       const data = await res.json();
       if (data.designs) {
         setDesigns(data.designs);
@@ -275,19 +283,47 @@ function CanvaPageContent() {
   };
 
   const openInCanva = (design: any) => {
-    // Always use design_url directly - simplest approach
-    if (design.design_url) {
-      console.log('Opening:', design.design_url);
-      window.open(design.design_url, '_blank');
-    } else if (design.urls?.edit_url) {
-      window.open(design.urls.edit_url, '_blank');
+    // Debug: log all possible URL fields
+    console.log('openInCanva called with design:', {
+      id: design.id,
+      canva_design_id: design.canva_design_id,
+      title: design.title,
+      design_url: design.design_url,
+      designUrl: design.designUrl,
+      edit_url: design.urls?.edit_url,
+      view_url: design.urls?.view_url,
+      thumbnail_url: design.thumbnail_url
+    });
+    
+    // Use design_url (snake_case from webhook storage) or designUrl (camelCase) or urls.edit_url (from API)
+    const url = design.design_url || design.designUrl || design.urls?.edit_url;
+    
+    if (url) {
+      console.log('Opening Canva URL:', url);
+      window.open(url, '_blank');
     } else {
-      alert('No URL available for this design');
+      console.error('No URL found for design:', design);
+      alert('No URL available for this design.\n\nDesign: ' + (design.title || design.canva_design_id || 'Unknown') + '\n\nCheck browser console (F12) for details.');
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+  const formatDate = (dateInput: any) => {
+    // Handle both Unix timestamp (seconds) and ISO string
+    let date: Date;
+    if (typeof dateInput === 'number') {
+      date = new Date(dateInput * 1000);
+    } else if (typeof dateInput === 'string') {
+      date = new Date(dateInput);
+    } else {
+      date = new Date();
+    }
+    
+    // Check if valid date
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -448,22 +484,30 @@ function CanvaPageContent() {
                     >
                       {/* Thumbnail */}
                       <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
-                        {/* Support both API designs and synced designs */}
-                        {(design.thumbnail?.url || design.thumbnail_url) ? (
+                        {/* Try to load thumbnail, show placeholder if fails */}
+                        {design.thumbnail?.url || design.thumbnail_url ? (
                           <img
                             src={design.thumbnail?.url || design.thumbnail_url}
                             alt={design.title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              // Hide broken images
+                              // Hide broken images, show placeholder instead
                               (e.target as HTMLImageElement).style.display = 'none';
                             }}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <svg className="w-12 h-12" style={{ color: '#9B9B8F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-50 to-purple-50">
+                            <svg className="w-16 h-16 mb-2" style={{ color: '#00C4CC' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
+                            <span className="text-xs font-medium px-2 text-center" style={{ color: '#666' }}>
+                              {design.title || 'Canva Design'}
+                            </span>
+                            {design.canva_design_id && (
+                              <span className="text-xs mt-1 px-2 py-1 rounded" style={{ background: '#E8E4DD', color: '#666' }}>
+                                ID: {design.canva_design_id}
+                              </span>
+                            )}
                           </div>
                         )}
                         {/* Page count badge - only for API designs */}
