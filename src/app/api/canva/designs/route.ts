@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   }
 }
 
-async function refreshToken(refreshToken: string): Promise<string | null> {
+async function refreshToken(refreshToken: string, userId: string): Promise<string | null> {
   const CANVA_CLIENT_ID = process.env.CANVA_CLIENT_ID;
   const CANVA_CLIENT_SECRET = process.env.CANVA_CLIENT_SECRET;
   
@@ -90,6 +90,22 @@ async function refreshToken(refreshToken: string): Promise<string | null> {
       console.error('Canva refresh error:', tokenData);
       return null;
     }
+    
+    // Update database with new tokens
+    const expiresIn = tokenData.expires_in || 3600;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const now = new Date().toISOString();
+    
+    await sqlRaw`
+      UPDATE integrations 
+      SET access_token = ${tokenData.access_token}, 
+          refresh_token = ${tokenData.refresh_token || refreshToken},
+          access_token_expires_at = ${expiresAt},
+          updated_at = ${now}
+      WHERE user_id = ${userId} AND provider = 'canva'
+    `;
+    
+    console.log('Token refreshed and saved for user:', userId);
     
     return tokenData.access_token;
   } catch (error) {

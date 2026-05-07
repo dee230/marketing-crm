@@ -29,6 +29,31 @@ interface Integration {
   access_token_expires_at?: string;
 }
 
+// Generate consistent color from design ID
+function getDesignColor(id: string, light = false): string {
+  const colors = [
+    '#00C4CC', '#E07A5F', '#2D2A26', '#10b981', '#8B5CF6',
+    '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#14B8A6'
+  ];
+  
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  const index = Math.abs(hash) % colors.length;
+  const color = colors[index];
+  
+  if (light) {
+    // Return a lighter version for gradient
+    return color + '80'; // Add 50% opacity
+  }
+  return color;
+}
+
 function CanvaPageContent() {
   const searchParams = useSearchParams();
   const [integration, setIntegration] = useState<Integration | null>(null);
@@ -482,34 +507,42 @@ function CanvaPageContent() {
                       style={{ borderColor: '#E8E4DD', background: '#fff' }}
                       onClick={() => openInCanva(design)}
                     >
-                      {/* Thumbnail */}
-                      <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
-                        {/* Try to load thumbnail, show placeholder if fails */}
-                        {design.thumbnail?.url || design.thumbnail_url ? (
-                          <img
-                            src={design.thumbnail?.url || design.thumbnail_url}
-                            alt={design.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Hide broken images, show placeholder instead
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-50 to-purple-50">
-                            <svg className="w-16 h-16 mb-2" style={{ color: '#00C4CC' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span className="text-xs font-medium px-2 text-center" style={{ color: '#666' }}>
-                              {design.title || 'Canva Design'}
-                            </span>
-                            {design.canva_design_id && (
-                              <span className="text-xs mt-1 px-2 py-1 rounded" style={{ background: '#E8E4DD', color: '#666' }}>
-                                ID: {design.canva_design_id}
-                              </span>
-                            )}
-                          </div>
-                        )}
+{/* Thumbnail */}
+                       <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
+                         {/* Check if thumbnail URL requires Canva auth - show placeholder directly */}
+                         {design.thumbnail?.url || (design.thumbnail_url && !design.thumbnail_url.includes('canva.com')) ? (
+                           <img
+                             src={design.thumbnail?.url || design.thumbnail_url}
+                             alt={design.title}
+                             className="w-full h-full object-cover"
+                             onError={(e) => {
+                               (e.target as HTMLImageElement).style.display = 'none';
+                             }}
+                           />
+                         ) : (
+                           /* Enhanced Placeholder */
+                           <div 
+                             className="flex flex-col items-center justify-center h-full"
+                             style={{ 
+                               background: `linear-gradient(135deg, ${getDesignColor(design.canva_design_id || design.id)}, ${getDesignColor(design.canva_design_id || design.id, true)})` 
+                             }}
+                           >
+                             {/* First Letter Avatar */}
+                             <div className="w-16 h-16 rounded-full bg-white bg-opacity-30 flex items-center justify-center mb-2 shadow-sm">
+                               <span className="text-3xl font-bold text-white">
+                                 {(design.title || 'C').charAt(0).toUpperCase()}
+                               </span>
+                             </div>
+                             <span className="text-sm font-semibold px-2 text-center text-white drop-shadow-sm">
+                               {design.title || 'Canva Design'}
+                             </span>
+                             {design.canva_design_id && (
+                               <span className="text-xs mt-1 px-2 py-1 rounded-full bg-white bg-opacity-25 text-white font-medium">
+                                 {design.canva_design_id}
+                               </span>
+                             )}
+                           </div>
+                         )}
                         {/* Page count badge - only for API designs */}
                         {design.page_count > 1 && (
                           <span className="absolute top-2 right-2 px-2 py-1 text-xs rounded" style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
