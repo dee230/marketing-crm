@@ -238,12 +238,32 @@ function CanvaPageContent() {
       const res = await fetch('/api/canva/webhook');
       console.log('Webhook response status:', res.status);
       const data = await res.json();
-      console.log('Webhook data:', data);
-      if (data.designs) {
-        console.log('Setting designs:', data.designs.length);
-        setDesigns(data.designs);
+      let designs = data.designs || [];
+      console.log('Webhook designs:', designs.length);
+
+      // Cross-reference with Canva API to detect deleted designs
+      try {
+        const canvaRes = await fetch('/api/canva/designs?limit=200');
+        if (canvaRes.ok) {
+          const canvaData = await canvaRes.json();
+          const canvaIds = new Set((canvaData.items || []).map((d: any) => d.id));
+          
+          const before = designs.length;
+          designs = designs.filter((d: any) => !d.canva_design_id || canvaIds.has(d.canva_design_id));
+          const removed = before - designs.length;
+          if (removed > 0) {
+            console.log(`Removed ${removed} design(s) deleted from Canva`);
+          }
+        }
+      } catch (err) {
+        console.log('Canva sync check skipped (API unavailable):', err);
+      }
+
+      if (designs.length > 0) {
+        console.log('Setting designs:', designs.length);
+        setDesigns(designs);
         // Also save full list for search
-        window.__allDesigns = [...data.designs];
+        window.__allDesigns = [...designs];
         // Clear search query if designs were refreshed
         setSearchQuery('');
       }
