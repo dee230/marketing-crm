@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
 import { sqlRaw } from '@/db';
 
 const CANVA_API_BASE = 'https://api.canva.com/rest/v1';
@@ -8,13 +7,6 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { designId: string } }
 ) {
-  const session = await getSession();
-  
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
-  const userId = (session.user as any)?.id;
   const { designId } = params;
   
   if (!designId) {
@@ -22,10 +14,11 @@ export async function GET(
   }
   
   try {
-    // Get Canva integration
+    // Get Canva integration (get the first connected one)
     const integrations = await sqlRaw`
       SELECT * FROM integrations 
-      WHERE user_id = ${userId} AND provider = 'canva' AND status = 'connected'
+      WHERE provider = 'canva' AND status = 'connected'
+      LIMIT 1
     `;
     
     const integration = integrations[0];
@@ -40,7 +33,7 @@ export async function GET(
     
     if (expiresAt <= new Date()) {
       // Token expired, refresh it
-      const refreshed = await refreshToken(integration.refresh_token, userId);
+      const refreshed = await refreshToken(integration.refresh_token, integration.user_id);
       if (!refreshed) {
         return NextResponse.json({ error: 'Failed to refresh token' }, { status: 401 });
       }
