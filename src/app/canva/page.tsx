@@ -54,6 +54,13 @@ function getDesignColor(id: string, light = false): string {
   return color;
 }
 
+// Extend Window for search cache
+declare global {
+  interface Window {
+    __allDesigns?: any[];
+  }
+}
+
 function CanvaPageContent() {
   const searchParams = useSearchParams();
   const [integration, setIntegration] = useState<Integration | null>(null);
@@ -76,6 +83,7 @@ function CanvaPageContent() {
   const [syncDesignUrl, setSyncDesignUrl] = useState('');
   const [syncDesignName, setSyncDesignName] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const success = searchParams.get('success');
   const error = searchParams.get('error');
@@ -234,6 +242,10 @@ function CanvaPageContent() {
       if (data.designs) {
         console.log('Setting designs:', data.designs.length);
         setDesigns(data.designs);
+        // Also save full list for search
+        window.__allDesigns = [...data.designs];
+        // Clear search query if designs were refreshed
+        setSearchQuery('');
       }
     } catch (err) {
       console.error('Failed to fetch zapped designs:', err);
@@ -301,22 +313,41 @@ function CanvaPageContent() {
   };
 
   const handleSearch = async () => {
-    try {
-      const res = await fetch(`/api/canva/designs${searchQuery ? `?query=${encodeURIComponent(searchQuery)}` : ''}`);
-      if (!res.ok) {
-        console.log('Search API failed (401 or other), falling back to webhook designs');
-        fetchZappedDesigns();
-        return;
-      }
-      const data = await res.json();
-      if (data.designs && data.designs.length > 0) {
-        setDesigns(data.designs);
-      } else {
-        // No results from API, show webhook designs
-        fetchZappedDesigns();
-      }
-    } catch (err) {
-      console.error('Failed to search designs:', err);
+    if (!searchQuery.trim()) {
+      // If search is empty, just refresh
+      fetchZappedDesigns();
+      return;
+    }
+    
+    // Client-side search: filter currently loaded designs
+    const q = searchQuery.toLowerCase().trim();
+    
+    // Save current full list if not already saved
+    if (!window.__allDesigns) {
+      window.__allDesigns = [...designs];
+    }
+    
+    const fullList = window.__allDesigns.length > 0 ? window.__allDesigns : designs;
+    
+    const filtered = fullList.filter((d: any) => {
+      const title = (d.title || '').toLowerCase();
+      const id = (d.canva_design_id || d.id || '').toLowerCase();
+      return title.includes(q) || id.includes(q);
+    });
+    
+    setDesigns(filtered);
+    
+    if (filtered.length === 0) {
+      console.log('No designs match search:', q);
+    }
+  };
+  
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    // Restore full list from saved designs
+    if (window.__allDesigns && window.__allDesigns.length > 0) {
+      setDesigns([...window.__allDesigns]);
+    } else {
       fetchZappedDesigns();
     }
   };
@@ -483,13 +514,29 @@ function CanvaPageContent() {
                     placeholder="Search designs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    className="w-full px-4 py-2 pl-10 rounded-lg border"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSearch();
+                      if (e.key === 'Escape') handleClearSearch();
+                    }}
+                    className="w-full px-4 py-2 pl-10 pr-8 rounded-lg border"
                     style={{ borderColor: '#E8E4DD', background: '#fff' }}
                   />
                   <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9B9B8F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
+                  {/* Clear search button */}
+                  {searchQuery && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
+                      style={{ color: '#9B9B8F' }}
+                      title="Clear search"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={handleSearch}
@@ -499,11 +546,23 @@ function CanvaPageContent() {
                   Search
                 </button>
                 <button
-                  onClick={fetchDesigns}
-                  className="px-4 py-2 rounded-lg"
+                  onClick={async () => {
+                    setRefreshing(true);
+                    await fetchZappedDesigns();
+                    setRefreshing(false);
+                  }}
+                  disabled={refreshing}
+                  className="px-4 py-2 rounded-lg flex items-center gap-2"
                   style={{ border: '1px solid #E8E4DD', background: '#fff' }}
                 >
-                  Refresh
+                  {refreshing ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Refreshing...
+                    </>
+                  ) : 'Refresh'}
                 </button>
               </div>
 
