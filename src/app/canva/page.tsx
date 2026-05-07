@@ -508,44 +508,44 @@ function CanvaPageContent() {
                       onClick={() => openInCanva(design)}
                     >
 {/* Thumbnail */}
-                       <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
-                         {/* Enhanced Placeholder (always rendered as background) */}
-                         <div 
-                           id={`placeholder-${design.id}`}
-                           className="flex flex-col items-center justify-center h-full absolute inset-0"
-                           style={{ 
-                             background: `linear-gradient(135deg, ${getDesignColor(design.canva_design_id || design.id)}, ${getDesignColor(design.canva_design_id || design.id, true)})`
-                           }}
-                         >
-                           {/* First Letter Avatar */}
-                           <div className="w-16 h-16 rounded-full bg-white bg-opacity-30 flex items-center justify-center mb-2 shadow-sm">
-                             <span className="text-3xl font-bold text-white">
-                               {(design.title || 'C').charAt(0).toUpperCase()}
-                             </span>
-                           </div>
-                           <span className="text-sm font-semibold px-2 text-center text-white drop-shadow-sm">
-                             {design.title || 'Canva Design'}
-                           </span>
-                           {design.canva_design_id && (
-                             <span className="text-xs mt-1 px-2 py-1 rounded-full bg-white bg-opacity-25 text-white font-medium">
-                               {design.canva_design_id}
-                             </span>
-                           )}
-                         </div>
-                         
-                         {/* Try to load thumbnail from our API (server-side fetch with auth) */}
-                         {design.canva_design_id ? (
-                           <img
-                             src={`/api/canva/thumbnail/${design.canva_design_id}`}
-                             alt={design.title}
-                             className="w-full h-full object-cover relative z-10"
-                             onError={(e) => {
-                               // Hide broken images, placeholder will show through
-                               (e.target as HTMLImageElement).style.display = 'none';
-                             }}
-                           />
-                         ) : null}
-                       </div>
+                      <div className="aspect-video relative" style={{ background: '#f5f5f5' }}>
+                        {/* Enhanced Placeholder (always rendered as background) */}
+                        <div 
+                          id={`placeholder-${design.id}`}
+                          className="flex flex-col items-center justify-center h-full absolute inset-0"
+                          style={{ 
+                            background: `linear-gradient(135deg, ${getDesignColor(design.canva_design_id || design.id)}, ${getDesignColor(design.canva_design_id || design.id, true)})`
+                          }}
+                        >
+                          {/* First Letter Avatar */}
+                          <div className="w-16 h-16 rounded-full bg-white bg-opacity-30 flex items-center justify-center mb-2 shadow-sm">
+                            <span className="text-3xl font-bold text-white">
+                              {(design.title || 'C').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold px-2 text-center text-white drop-shadow-sm">
+                            {design.title || 'Canva Design'}
+                          </span>
+                          {design.canva_design_id && (
+                            <span className="text-xs mt-1 px-2 py-1 rounded-full bg-white bg-opacity-25 text-white font-medium">
+                              {design.canva_design_id}
+                            </span>
+                          )}
+                        </div>
+                      
+                        {/* Try to load thumbnail from our API (server-side fetch with auth) */}
+                        {design.canva_design_id ? (
+                          <img
+                            src={`/api/canva/thumbnail/${design.canva_design_id}`}
+                            alt={design.title}
+                            className="w-full h-full object-cover relative z-10"
+                            onError={(e) => {
+                              // Hide broken images, placeholder will show through
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        
                         {/* Page count badge - only for API designs */}
                         {design.page_count > 1 && (
                           <span className="absolute top-2 right-2 px-2 py-1 text-xs rounded" style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
