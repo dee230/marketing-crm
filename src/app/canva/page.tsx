@@ -207,8 +207,8 @@ function CanvaPageContent() {
           designId: designId,
           designName: syncDesignName || designId,
           designUrl: designUrl,
-          thumbnailUrl: `https://www.canva.com/_api/design-thumbnail/${designId}`,
-          exportUrl: `https://www.canva.com/_api/export/${designId}`,
+          // Don't send thumbnailUrl - the thumbnail API will fetch from Canva directly
+          exportUrl: `https://www.canva.com/design/${designId}/download`,
         }),
       });
       const data = await res.json();
