@@ -363,7 +363,7 @@ function CanvaPageContent() {
   };
 
   const pollExportStatus = async (exportId: string, designId: string) => {
-    const maxAttempts = 60; // 2 min at 2s intervals
+    const maxAttempts = 150; // 5 minutes at 2s intervals
     let attempts = 0;
     
     const poll = async () => {
@@ -394,6 +394,8 @@ function CanvaPageContent() {
           setExportStatus(prev => ({ ...prev, [designId]: 'failed' }));
           alert('Export failed: ' + (data.job?.error || 'Unknown error'));
         } else if (attempts < maxAttempts) {
+          // Update UI showing it's still processing
+          setExportStatus(prev => ({ ...prev, [designId]: `processing (${Math.round(attempts * 2)}s)` }));
           setTimeout(poll, 2000);
         } else {
           setExportStatus(prev => ({ ...prev, [designId]: 'timeout' }));
@@ -776,12 +778,14 @@ function CanvaPageContent() {
                         {exportStatus[design.id] && (
                           <p className="text-xs mt-2" style={{ 
                             color: exportStatus[design.id] === 'done' ? '#10b981' : 
-                                   exportStatus[design.id] === 'failed' ? '#ef4444' : '#9B9B8F' 
+                                   exportStatus[design.id] === 'failed' ? '#ef4444' : 
+                                   exportStatus[design.id] === 'timeout' ? '#f59e0b' : '#9B9B8F' 
                           }}>
                             {exportStatus[design.id] === 'done' && '✓ Exported!'}
-                            {exportStatus[design.id] === 'processing' && 'Exporting...'}
                             {exportStatus[design.id] === 'failed' && 'Export failed'}
-                            {exportStatus[design.id] === 'timeout' && 'Export timed out'}
+                            {exportStatus[design.id] === 'timeout' && 'Export timed out — try again'}
+                            {exportStatus[design.id]?.startsWith?.('processing') && 
+                              `Exporting... ${exportStatus[design.id].replace('processing (', '').replace(')', '')}`}
                           </p>
                         )}
                       </div>
