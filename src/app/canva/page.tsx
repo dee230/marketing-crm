@@ -172,6 +172,39 @@ function CanvaPageContent() {
     }
   };
 
+  // Reconnect: disconnect + immediately reconnect to get fresh tokens
+  const handleReconnect = async () => {
+    if (!confirm('Reconnect Canva? This will refresh your connection and restore thumbnails.')) return;
+    
+    setConnecting(true);
+    try {
+      // Step 1: Disconnect
+      const delRes = await fetch('/api/integrations?provider=canva', { method: 'DELETE' });
+      const delData = await delRes.json();
+      if (!delData.success) {
+        alert('Failed to disconnect, try again');
+        return;
+      }
+      
+      // Step 2: Immediately reconnect
+      const res = await fetch('/api/integrations?action=connect&provider=canva');
+      const data = await res.json();
+      if (data.authUrl) {
+        if (data.codeVerifier) {
+          localStorage.setItem('canva_code_verifier', data.codeVerifier);
+        }
+        window.location.href = data.authUrl;
+      } else {
+        alert('Failed to get authorization URL');
+      }
+    } catch (err) {
+      console.error('Failed to reconnect:', err);
+      alert('Failed to reconnect');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const handleCreateDesign = () => {
     // Open Canva for users to design - they know Canva already
     window.open('https://www.canva.com/', '_blank');
@@ -482,6 +515,15 @@ function CanvaPageContent() {
             </div>
             {integration?.status === 'connected' && (
               <div className="flex gap-2">
+                <button
+                  onClick={handleReconnect}
+                  disabled={connecting}
+                  className="text-sm px-4 py-2 rounded flex items-center gap-1"
+                  style={{ background: '#f59e0b', color: '#fff' }}
+                  title="Fix expired token - get fresh Canva connection"
+                >
+                  {connecting ? 'Reconnecting...' : '⚡ Reconnect'}
+                </button>
                 <button
                   onClick={handleDisconnect}
                   disabled={connecting}
