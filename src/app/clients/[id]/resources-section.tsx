@@ -171,12 +171,22 @@ export function ResourcesSection({ companyName, resources, personId, resourceIma
             {selectedDesignId ? (
               <div className="relative rounded-lg overflow-hidden border mb-2" style={{ borderColor: '#E8E4DD', maxWidth: '320px' }}>
                 <img
-                  src={designs.find(d => d.id === selectedDesignId)?.thumbnail_url || 
-                       resourceImage?.thumbnailUrl || ''}
+                  src={`/api/canva/thumbnail/${designs.find(d => d.id === selectedDesignId)?.canva_design_id || resourceImage?.canvaDesignId || ''}`}
                   alt="Selected design"
                   className="w-full h-40 object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    // Show gradient placeholder on error
+                    const img = e.target as HTMLImageElement;
+                    img.style.display = 'none';
+                    const parent = img.parentElement!;
+                    if (!parent.querySelector('[data-placeholder]')) {
+                      const div = document.createElement('div');
+                      div.setAttribute('data-placeholder', '');
+                      div.className = 'w-full h-40 flex items-center justify-center';
+                      div.style.background = 'linear-gradient(135deg, #F5F5F5 0%, #E8E4DD 100%)';
+                      div.innerHTML = '<span class="text-3xl">🎨</span>';
+                      parent.insertBefore(div, img.nextSibling);
+                    }
                   }}
                 />
                 <div className="p-2 text-xs" style={{ background: '#F5F5F5', color: '#2D2A26' }}>
@@ -330,11 +340,21 @@ export function ResourcesSection({ companyName, resources, personId, resourceIma
           {resourceImage && (
             <div className="rounded-lg overflow-hidden border" style={{ borderColor: '#E8E4DD', maxWidth: '320px' }}>
               <img
-                src={resourceImage.thumbnailUrl || '/placeholder.svg'}
+                src={`/api/canva/thumbnail/${resourceImage.canvaDesignId}`}
                 alt={resourceImage.title || 'Assigned design'}
                 className="w-full h-40 object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = 'none';
+                  const parent = img.parentElement!;
+                  if (!parent.querySelector('[data-placeholder]')) {
+                    const div = document.createElement('div');
+                    div.setAttribute('data-placeholder', '');
+                    div.className = 'w-full h-40 flex items-center justify-center';
+                    div.style.background = 'linear-gradient(135deg, #F5F5F5 0%, #E8E4DD 100%)';
+                    div.innerHTML = '<span class="text-3xl">🎨</span>';
+                    parent.insertBefore(div, img.nextSibling);
+                  }
                 }}
               />
               {resourceImage.title && (
@@ -448,29 +468,14 @@ export function ResourcesSection({ companyName, resources, personId, resourceIma
                         style={isSelected ? { boxShadow: '0 0 0 2px rgba(224, 122, 95, 0.3)' } : {}}
                       >
                         <div className="aspect-[4/3] relative" style={{ background: '#F5F5F5' }}>
-                          {design.thumbnail_url ? (
-                            <img
-                              src={design.thumbnail_url}
-                              alt={design.title || 'Design'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.classList.add('flex', 'items-center', 'justify-center');
-                                const parent = (e.target as HTMLImageElement).parentElement!;
-                                if (!parent.querySelector('[data-placeholder]')) {
-                                  const placeholder = document.createElement('span');
-                                  placeholder.setAttribute('data-placeholder', '');
-                                  placeholder.textContent = '🎨';
-                                  placeholder.className = 'text-3xl';
-                                  parent.appendChild(placeholder);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <div className="flex items-center justify-center h-full">
-                              <span className="text-3xl">🎨</span>
-                            </div>
-                          )}
+                          <img
+                            src={`/api/canva/thumbnail/${design.canva_design_id}`}
+                            alt={design.title || 'Design'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
                           {isSelected && (
                             <div className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#E07A5F' }}>
                               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
