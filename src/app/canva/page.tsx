@@ -77,7 +77,9 @@ function CanvaPageContent() {
   const [newDesignType, setNewDesignType] = useState('POSTER');
   const [exportFormat, setExportFormat] = useState('pdf');
   const [exportStatus, setExportStatus] = useState<Record<string, string>>({});
-  
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [roleLoaded, setRoleLoaded] = useState(false);
+
   // Manual sync modal
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncDesignUrl, setSyncDesignUrl] = useState('');
@@ -89,8 +91,23 @@ function CanvaPageContent() {
   const error = searchParams.get('error');
 
   useEffect(() => {
+    fetchUserRole();
     fetchIntegration();
   }, []);
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch('/api/auth/session');
+      if (res.ok) {
+        const data = await res.json();
+        setIsAdmin(data.isAdmin || false);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user role:', err);
+    } finally {
+      setRoleLoaded(true);
+    }
+  };
 
   const fetchIntegration = async () => {
     try {
@@ -534,21 +551,25 @@ function CanvaPageContent() {
                 >
                   {connecting ? 'Reconnecting...' : '⚡ Reconnect'}
                 </button>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={connecting}
-                  className="text-sm px-4 py-2 rounded"
-                  style={{ color: '#dc2626', border: '1px solid #dc2626' }}
-                >
-                  {connecting ? 'Disconnecting...' : 'Disconnect'}
-                </button>
-                <Link
-                  href="/canva/make"
-                  className="text-sm px-4 py-2 rounded"
-                  style={{ background: '#00C4CC', color: '#fff' }}
-                >
-                  Set up Make →
-                </Link>
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={handleDisconnect}
+                      disabled={connecting}
+                      className="text-sm px-4 py-2 rounded"
+                      style={{ color: '#dc2626', border: '1px solid #dc2626' }}
+                    >
+                      {connecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                    <Link
+                      href="/canva/make"
+                      className="text-sm px-4 py-2 rounded"
+                      style={{ background: '#00C4CC', color: '#fff' }}
+                    >
+                      Set up Make →
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={() => setShowSyncModal(true)}
                   className="text-sm px-4 py-2 rounded"
@@ -757,14 +778,16 @@ function CanvaPageContent() {
                           >
                             {exporting === design.id ? '...' : 'Export'}
                           </button>
-                          <button
-                            onClick={() => handleRemoveDesign(design)}
-                            className="px-2 py-1 text-xs rounded"
-                            style={{ border: '1px solid #fecaca', color: '#dc2626' }}
-                            title="Remove from page (keeps Canva design intact)"
-                          >
-                            Remove
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleRemoveDesign(design)}
+                              className="px-2 py-1 text-xs rounded"
+                              style={{ border: '1px solid #fecaca', color: '#dc2626' }}
+                              title="Remove from page (keeps Canva design intact)"
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                         
                         {/* Export Status */}
