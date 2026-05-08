@@ -173,6 +173,23 @@ export default async function CompanyDetailPage({ params }: PageProps) {
     instagram: people[0]?.instagram,
     otherLinks: people[0]?.otherLinks,
   };
+  const resourceImageId = people[0]?.resource_image_id || null;
+  
+  // Fetch assigned Canva design thumbnail if set
+  let resourceImage: { id: string; canvaDesignId: string; thumbnailUrl: string | null; title: string | null } | null = null;
+  if (resourceImageId) {
+    const designs = await sqlRaw`
+      SELECT id, canva_design_id, thumbnail_url, title FROM canva_designs WHERE id = ${resourceImageId} LIMIT 1
+    `;
+    if (designs[0]) {
+      resourceImage = {
+        id: designs[0].id,
+        canvaDesignId: designs[0].canva_design_id,
+        thumbnailUrl: designs[0].thumbnail_url,
+        title: designs[0].title,
+      };
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
@@ -276,6 +293,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
               companyName={companyName}
               resources={companyResources}
               personId={people[0].id}
+              resourceImage={resourceImage}
               isAdmin={isAdmin}
             />
 

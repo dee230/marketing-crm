@@ -51,6 +51,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (body.otherLinks !== undefined) {
       await sqlRaw`UPDATE clients SET other_links = ${body.otherLinks || null}, updated_at = ${now} WHERE id = ${id}`;
     }
+    if (body.resourceImageId !== undefined) {
+      await sqlRaw`UPDATE clients SET resource_image_id = ${body.resourceImageId || null}, updated_at = ${now} WHERE id = ${id}`;
+    }
     
     // Log the action
     await logAudit({

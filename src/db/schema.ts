@@ -84,6 +84,7 @@ export const clients = pgTable('clients', {
   twitter: text('twitter'),
   instagram: text('instagram'),
   otherLinks: text('other_links'),
+  resourceImageId: text('resource_image_id'), // References canva_designs.id for assigned Canva image
   createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface ClientResources {
@@ -11,10 +11,18 @@ interface ClientResources {
   otherLinks: string | null;
 }
 
+interface ResourceImage {
+  id: string;
+  canvaDesignId: string;
+  thumbnailUrl: string | null;
+  title: string | null;
+}
+
 interface ResourcesSectionProps {
   companyName: string;
   resources: ClientResources;
   personId: string;
+  resourceImage: ResourceImage | null;
   isAdmin: boolean;
 }
 
@@ -23,7 +31,15 @@ interface OtherLink {
   url: string;
 }
 
-export function ResourcesSection({ companyName, resources, personId, isAdmin }: ResourcesSectionProps) {
+interface CanvaDesign {
+  id: string;
+  canva_design_id: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  design_url: string | null;
+}
+
+export function ResourcesSection({ companyName, resources, personId, resourceImage, isAdmin }: ResourcesSectionProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [resourcesData, setResourcesData] = useState<ClientResources>(resources);
@@ -41,6 +57,12 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Canva image picker state
+  const [showPicker, setShowPicker] = useState(false);
+  const [designs, setDesigns] = useState<CanvaDesign[]>([]);
+  const [loadingDesigns, setLoadingDesigns] = useState(false);
+  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(resourceImage?.id || null);
+
   const updateField = (field: keyof ClientResources, value: string) => {
     setResourcesData({ ...resourcesData, [field]: value || null });
   };
@@ -57,6 +79,33 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
     setOtherLinks(otherLinks.filter((_, i) => i !== index));
   };
 
+  const fetchDesigns = async () => {
+    setLoadingDesigns(true);
+    try {
+      const res = await fetch('/api/canva/webhook');
+      const data = await res.json();
+      setDesigns(data.designs || []);
+    } catch (err) {
+      console.error('Failed to fetch Canva designs:', err);
+    }
+    setLoadingDesigns(false);
+  };
+
+  const openPicker = () => {
+    setShowPicker(true);
+    setSelectedDesignId(resourceImage?.id || null);
+    fetchDesigns();
+  };
+
+  const closePicker = () => {
+    setShowPicker(false);
+    setSelectedDesignId(resourceImage?.id || null);
+  };
+
+  const selectDesign = (designId: string) => {
+    setSelectedDesignId(designId === selectedDesignId ? null : designId);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await fetch(`/api/clients/${personId}`, {
@@ -65,10 +114,12 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
       body: JSON.stringify({
         ...resourcesData,
         otherLinks: JSON.stringify(otherLinks),
+        resourceImageId: selectedDesignId || null,
       }),
     });
     setSaving(false);
     setIsEditing(false);
+    setShowPicker(false);
     router.refresh();
   };
 
@@ -84,7 +135,9 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
       }
       return [];
     });
+    setSelectedDesignId(resourceImage?.id || null);
     setIsEditing(false);
+    setShowPicker(false);
   };
 
   const socialPlatforms = [
@@ -112,6 +165,50 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
 
       {isEditing ? (
         <div className="space-y-4">
+          {/* --- Canva Image Picker --- */}
+          <div>
+            <label className="text-xs block mb-1" style={{ color: '#9B9B8F' }}>Canva Design Image</label>
+            {selectedDesignId ? (
+              <div className="relative rounded-lg overflow-hidden border mb-2" style={{ borderColor: '#E8E4DD', maxWidth: '320px' }}>
+                <img
+                  src={designs.find(d => d.id === selectedDesignId)?.thumbnail_url || 
+                       resourceImage?.thumbnailUrl || ''}
+                  alt="Selected design"
+                  className="w-full h-40 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className="p-2 text-xs" style={{ background: '#F5F5F5', color: '#2D2A26' }}>
+                  {designs.find(d => d.id === selectedDesignId)?.title || resourceImage?.title || 'Selected design'}
+                </div>
+              </div>
+            ) : (
+              <div
+                className="rounded-lg border-2 border-dashed flex items-center justify-center mb-2"
+                style={{ borderColor: '#E8E4DD', maxWidth: '320px', height: '100px' }}
+              >
+                <p className="text-xs" style={{ color: '#9B9B8F' }}>No image assigned</p>
+              </div>
+            )}
+            <button
+              onClick={openPicker}
+              className="text-xs px-3 py-1.5 rounded-lg"
+              style={{ color: '#E07A5F', background: 'rgba(224, 122, 95, 0.1)' }}
+            >
+              {selectedDesignId ? 'Change Image' : 'Select Canva Image'}
+            </button>
+            {selectedDesignId && (
+              <button
+                onClick={() => setSelectedDesignId(null)}
+                className="text-xs px-3 py-1.5 rounded-lg ml-2"
+                style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
           {/* Website */}
           <div>
             <label className="text-xs block mb-1" style={{ color: '#9B9B8F' }}>Website</label>
@@ -229,6 +326,25 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
       ) : (
         /* View Mode */
         <div className="space-y-3">
+          {/* Show assigned Canva image */}
+          {resourceImage && (
+            <div className="rounded-lg overflow-hidden border" style={{ borderColor: '#E8E4DD', maxWidth: '320px' }}>
+              <img
+                src={resourceImage.thumbnailUrl || '/placeholder.svg'}
+                alt={resourceImage.title || 'Assigned design'}
+                className="w-full h-40 object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              {resourceImage.title && (
+                <div className="px-3 py-2 text-xs" style={{ background: '#F5F5F5', color: '#9B9B8F' }}>
+                  {resourceImage.title}
+                </div>
+              )}
+            </div>
+          )}
+
           {resourcesData.website && (
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5" style={{ color: '#9B9B8F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,11 +385,138 @@ export function ResourcesSection({ companyName, resources, personId, isAdmin }: 
             </div>
           )}
 
-          {!resourcesData.website && !resourcesData.linkedin && !resourcesData.twitter && !resourcesData.instagram && otherLinks.length === 0 && (
+          {!resourceImage && !resourcesData.website && !resourcesData.linkedin && !resourcesData.twitter && !resourcesData.instagram && otherLinks.length === 0 && (
             <p className="text-sm" style={{ color: '#9B9B8F' }}>
               No resources added yet. Click "Edit Resources" to add links.
             </p>
           )}
+        </div>
+      )}
+
+      {/* --- Canva Design Picker Modal --- */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={closePicker}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: '#E8E4DD' }}>
+              <h3 className="font-semibold" style={{ color: '#2D2A26' }}>Select Canva Design</h3>
+              <button
+                onClick={closePicker}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                <svg className="w-5 h-5" style={{ color: '#9B9B8F' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Grid */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingDesigns ? (
+                <div className="flex items-center justify-center py-12">
+                  <svg className="animate-spin h-6 w-6" style={{ color: '#E07A5F' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
+              ) : designs.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-sm" style={{ color: '#9B9B8F' }}>No Canva designs available.</p>
+                  <p className="text-xs mt-1" style={{ color: '#9B9B8F' }}>
+                    Sync designs from the Canva page first.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {designs.map((design) => {
+                    const isSelected = selectedDesignId === design.id;
+                    return (
+                      <button
+                        key={design.id}
+                        onClick={() => selectDesign(design.id)}
+                        className={`rounded-lg overflow-hidden border-2 text-left transition-all ${
+                          isSelected ? 'border-[#E07A5F]' : 'border-transparent hover:border-gray-300'
+                        }`}
+                        style={isSelected ? { boxShadow: '0 0 0 2px rgba(224, 122, 95, 0.3)' } : {}}
+                      >
+                        <div className="aspect-[4/3] relative" style={{ background: '#F5F5F5' }}>
+                          {design.thumbnail_url ? (
+                            <img
+                              src={design.thumbnail_url}
+                              alt={design.title || 'Design'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).parentElement!.classList.add('flex', 'items-center', 'justify-center');
+                                const parent = (e.target as HTMLImageElement).parentElement!;
+                                if (!parent.querySelector('[data-placeholder]')) {
+                                  const placeholder = document.createElement('span');
+                                  placeholder.setAttribute('data-placeholder', '');
+                                  placeholder.textContent = '🎨';
+                                  placeholder.className = 'text-3xl';
+                                  parent.appendChild(placeholder);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <span className="text-3xl">🎨</span>
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#E07A5F' }}>
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-2">
+                          <p className="text-xs truncate" style={{ color: '#2D2A26' }}>
+                            {design.title || 'Untitled'}
+                          </p>
+                          <p className="text-xs" style={{ color: '#9B9B8F' }}>
+                            {design.canva_design_id?.slice(0, 12)}...
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: '#E8E4DD' }}>
+              <p className="text-xs" style={{ color: '#9B9B8F' }}>
+                {selectedDesignId ? '1 design selected' : 'No design selected'}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={closePicker}
+                  className="text-sm px-4 py-2 rounded-lg"
+                  style={{ color: '#9B9B8F', background: '#F5F5F5' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowPicker(false)}
+                  className="text-sm px-4 py-2 rounded-lg"
+                  style={{ color: '#FFFFFF', background: '#E07A5F' }}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
