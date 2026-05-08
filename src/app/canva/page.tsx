@@ -350,7 +350,10 @@ function CanvaPageContent() {
         setExportStatus(prev => ({ ...prev, [selectedDesign.id]: 'processing' }));
         pollExportStatus(data.exportId, selectedDesign.id);
       } else {
-        alert('Failed to start export: ' + (data.error || 'Unknown error'));
+        const errMsg = data.error || 'Unknown error';
+        const details = data.details ? JSON.stringify(data.details).slice(0, 200) : '';
+        console.error('Export failed:', { status: res.status, data });
+        alert(`Export failed: ${errMsg}${details ? '\n\n' + details : ''}`);
       }
     } catch (err) {
       console.error('Failed to export:', err);
