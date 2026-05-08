@@ -190,6 +190,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: e.message });
     }
   }
+
+  // Debug: check if refresh_token exists (boolean only, never expose the value)
+  if (debug === 'tokens') {
+    try {
+      const integrations = await sqlRaw`SELECT id, user_id, provider, status, 
+        CASE WHEN refresh_token IS NOT NULL AND refresh_token != '' THEN true ELSE false END as has_refresh_token,
+        CASE WHEN access_token IS NOT NULL AND access_token != '' THEN true ELSE false END as has_access_token,
+        access_token_expires_at 
+        FROM integrations WHERE provider = 'canva'`;
+      return NextResponse.json({ integrations });
+    } catch (e) {
+      return NextResponse.json({ error: e.message });
+    }
+  }
   
   try {
     const designs = await sqlRaw`
