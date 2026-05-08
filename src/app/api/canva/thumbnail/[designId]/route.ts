@@ -56,7 +56,8 @@ export async function GET(
     const integration = integrations[0];
     
     if (!integration) {
-      return NextResponse.json({ error: 'Canva not connected' }, { status: 400 });
+      // No integration — return empty (UI will show placeholder)
+      return new NextResponse(null, { status: 204 });
     }
     
     // Check if token needs refresh
@@ -66,7 +67,9 @@ export async function GET(
     if (expiresAt <= new Date()) {
       const refreshed = await refreshToken(integration.refresh_token, integration.user_id);
       if (!refreshed) {
-        return NextResponse.json({ error: 'Failed to refresh token' }, { status: 401 });
+        // Can't refresh — return empty (UI will show placeholder)
+        console.warn('Thumbnail: token refresh failed, showing placeholder');
+        return new NextResponse(null, { status: 204 });
       }
       accessToken = refreshed;
     }
@@ -81,7 +84,8 @@ export async function GET(
     if (!designsRes.ok) {
       const errorData = await designsRes.json();
       console.error('Canva designs fetch error:', errorData);
-      return NextResponse.json({ error: 'Failed to fetch designs', details: errorData }, { status: designsRes.status });
+      // Return empty — UI will show placeholder
+      return new NextResponse(null, { status: 204 });
     }
     
     const designsData = await designsRes.json();
@@ -91,20 +95,21 @@ export async function GET(
     
     if (!design) {
       console.error('Design not found in Canva API:', designId);
-      return NextResponse.json({ error: 'Design not found' }, { status: 404 });
+      // Return empty — UI will show placeholder
+      return new NextResponse(null, { status: 204 });
     }
     
     const thumbnailUrl = design.thumbnail?.url;
     
     if (!thumbnailUrl) {
       console.error('No thumbnail in design:', design);
-      return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 });
+      return new NextResponse(null, { status: 204 });
     }
     
     const imageRes = await fetch(thumbnailUrl);
     
     if (!imageRes.ok) {
-      return NextResponse.json({ error: 'Failed to fetch thumbnail image' }, { status: 502 });
+      return new NextResponse(null, { status: 204 });
     }
     
     const imageBuffer = await imageRes.arrayBuffer();
@@ -119,7 +124,7 @@ export async function GET(
     
   } catch (error) {
     console.error('Thumbnail API error:', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return new NextResponse(null, { status: 204 });
   }
 }
 
