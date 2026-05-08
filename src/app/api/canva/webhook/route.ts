@@ -196,7 +196,9 @@ export async function GET(request: Request) {
     try {
       const integrations = await sqlRaw`SELECT id, user_id, provider, status, 
         CASE WHEN refresh_token IS NOT NULL AND refresh_token != '' THEN true ELSE false END as has_refresh_token,
+        LENGTH(refresh_token) as refresh_token_length,
         CASE WHEN access_token IS NOT NULL AND access_token != '' THEN true ELSE false END as has_access_token,
+        LENGTH(access_token) as access_token_length,
         access_token_expires_at 
         FROM integrations WHERE provider = 'canva'`;
       return NextResponse.json({ integrations });
