@@ -8,9 +8,6 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "scheme": "nandi-crm",
-    "cli": {
-      "appVersionSource": "remote"
-    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -26,10 +23,7 @@
         "backgroundColor": "#FDFBF7"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.nandicreative.crm",
-      "compileSdkVersion": 35,
-      "targetSdkVersion": 35,
-      "minSdkVersion": 26
+      "package": "com.nandicreative.crm"
     },
     "web": {
       "favicon": "./assets/favicon.png"
