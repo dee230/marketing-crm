@@ -35,9 +35,9 @@ export async function POST(request: Request) {
   // Check if token needs refresh
   const expiresAt = new Date(integration.access_token_expires_at);
   if (expiresAt <= new Date()) {
-    const refreshed = await refreshToken(integration.refresh_token);
+    const refreshed = await refreshToken(integration.refresh_token, userId);
     if (!refreshed) {
-      return NextResponse.json({ error: 'Failed to refresh token' }, { status: 401 });
+      return NextResponse.json({ error: 'Canva connection expired. Click ⚡ Reconnect to refresh.' }, { status: 401 });
     }
     accessToken = refreshed;
   }
@@ -145,13 +145,14 @@ export async function GET(request: Request) {
   }
 }
 
-async function refreshToken(refreshToken: string): Promise<string | null> {
+async function refreshToken(refreshToken: string, userId: string): Promise<string | null> {
   const CANVA_CLIENT_ID = process.env.CANVA_CLIENT_ID;
   const CANVA_CLIENT_SECRET = process.env.CANVA_CLIENT_SECRET;
   
+  if (!refreshToken || !CANVA_CLIENT_ID || !CANVA_CLIENT_SECRET) return null;
+  
   try {
     const tokenUrl = 'https://api.canva.com/rest/v1/oauth/token';
-    
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -165,10 +166,20 @@ async function refreshToken(refreshToken: string): Promise<string | null> {
     });
     
     const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) return null;
     
-    if (!tokenData.access_token) {
-      return null;
-    }
+    const expiresIn = tokenData.expires_in || 3600;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const now = new Date().toISOString();
+    
+    await sqlRaw`
+      UPDATE integrations 
+      SET access_token = ${tokenData.access_token}, 
+          refresh_token = ${tokenData.refresh_token || refreshToken},
+          access_token_expires_at = ${expiresAt},
+          updated_at = ${now}
+      WHERE user_id = ${userId} AND provider = 'canva'
+    `;
     
     return tokenData.access_token;
   } catch {
