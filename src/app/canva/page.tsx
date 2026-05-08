@@ -363,7 +363,7 @@ function CanvaPageContent() {
   };
 
   const pollExportStatus = async (exportId: string, designId: string) => {
-    const maxAttempts = 30;
+    const maxAttempts = 60; // 2 min at 2s intervals
     let attempts = 0;
     
     const poll = async () => {
@@ -371,16 +371,20 @@ function CanvaPageContent() {
       try {
         const res = await fetch(`/api/canva/export?exportId=${exportId}`);
         const data = await res.json();
+        console.log('Export status poll:', data);
         
-        if (data.status === 'success') {
+        // Canva returns status in job.status
+        const status = data.job?.status || data.status;
+        const urls = data.job?.urls || data.urls;
+        
+        if (status === 'success') {
           setExportStatus(prev => ({ ...prev, [designId]: 'done' }));
-          // Get the download URL
-          if (data.urls?.[0]) {
-            window.open(data.urls[0], '_blank');
+          if (urls?.[0]) {
+            window.open(urls[0], '_blank');
           }
-        } else if (data.status === 'failed') {
+        } else if (status === 'failed') {
           setExportStatus(prev => ({ ...prev, [designId]: 'failed' }));
-          alert('Export failed');
+          alert('Export failed: ' + (data.job?.error || 'Unknown error'));
         } else if (attempts < maxAttempts) {
           setTimeout(poll, 2000);
         } else {
