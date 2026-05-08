@@ -378,17 +378,10 @@ function CanvaPageContent() {
         const urls = data.job?.urls || data.urls;
         
         if (status === 'success') {
-          setExportStatus(prev => ({ ...prev, [designId]: 'done' }));
+          setExportStatus(prev => ({ ...prev, [designId]: `done:${urls?.[0] || ''}` }));
           if (urls?.[0]) {
-            // Use anchor click instead of window.open to avoid popup blockers
-            const a = document.createElement('a');
-            a.href = urls[0];
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // Navigate to the download URL (triggers browser download)
+            window.location.href = urls[0];
           }
         } else if (status === 'failed') {
           setExportStatus(prev => ({ ...prev, [designId]: 'failed' }));
@@ -777,11 +770,20 @@ function CanvaPageContent() {
                         {/* Export Status */}
                         {exportStatus[design.id] && (
                           <p className="text-xs mt-2" style={{ 
-                            color: exportStatus[design.id] === 'done' ? '#10b981' : 
-                                   exportStatus[design.id] === 'failed' ? '#ef4444' : 
+                            color: exportStatus[design.id] === 'failed' ? '#ef4444' : 
                                    exportStatus[design.id] === 'timeout' ? '#f59e0b' : '#9B9B8F' 
                           }}>
-                            {exportStatus[design.id] === 'done' && '✓ Exported!'}
+                            {exportStatus[design.id]?.startsWith?.('done:') && (
+                              <a 
+                                href={exportStatus[design.id].slice(5)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                                style={{ color: '#10b981' }}
+                              >
+                                ✓ Download exported file
+                              </a>
+                            )}
                             {exportStatus[design.id] === 'failed' && 'Export failed'}
                             {exportStatus[design.id] === 'timeout' && 'Export timed out — try again'}
                             {exportStatus[design.id]?.startsWith?.('processing') && 
