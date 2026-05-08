@@ -211,10 +211,17 @@ export async function GET(request: Request) {
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode');
+  const designId = searchParams.get('designId');
   
   try {
     let result;
-    if (mode === 'test') {
+    if (mode === 'archive' && designId) {
+      // Archive a single design (removes from page, keeps Canva untouched)
+      await sqlRaw`
+        UPDATE canva_designs SET status = 'archived', updated_at = NOW() WHERE canva_design_id = ${designId}
+      `;
+      return NextResponse.json({ success: true, archived: designId });
+    } else if (mode === 'test') {
       result = await sqlRaw`
         DELETE FROM canva_designs 
         WHERE canva_design_id LIKE 'test-%'

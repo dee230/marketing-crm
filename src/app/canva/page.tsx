@@ -276,6 +276,28 @@ function CanvaPageContent() {
     }
   };
 
+  // Remove a design from the page (archives in DB, keeps Canva untouched)
+  const handleRemoveDesign = async (design: any) => {
+    if (!confirm(`Remove "${design.title || 'this design'}" from the page? (Keeps it safe in Canva)`)) return;
+    
+    const designId = design.canva_design_id || design.id;
+    if (!designId) return;
+    
+    try {
+      const res = await fetch(`/api/canva/webhook?mode=archive&designId=${encodeURIComponent(designId)}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDesigns(prev => prev.filter((d: any) => d.id !== design.id));
+        window.__allDesigns = window.__allDesigns?.filter((d: any) => d.id !== design.id) || [];
+      } else {
+        const data = await res.json();
+        alert('Failed to remove: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to remove design:', err);
+      alert('Failed to remove design');
+    }
+  };
+
   const handleExport = async () => {
     if (!selectedDesign) return;
     
@@ -682,6 +704,14 @@ function CanvaPageContent() {
                             style={{ border: '1px solid #E8E4DD' }}
                           >
                             {exporting === design.id ? '...' : 'Export'}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveDesign(design)}
+                            className="px-2 py-1 text-xs rounded"
+                            style={{ border: '1px solid #fecaca', color: '#dc2626' }}
+                            title="Remove from page (keeps Canva design intact)"
+                          >
+                            Remove
                           </button>
                         </div>
                         
