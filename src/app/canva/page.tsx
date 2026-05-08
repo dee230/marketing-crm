@@ -380,7 +380,15 @@ function CanvaPageContent() {
         if (status === 'success') {
           setExportStatus(prev => ({ ...prev, [designId]: 'done' }));
           if (urls?.[0]) {
-            window.open(urls[0], '_blank');
+            // Use anchor click instead of window.open to avoid popup blockers
+            const a = document.createElement('a');
+            a.href = urls[0];
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
           }
         } else if (status === 'failed') {
           setExportStatus(prev => ({ ...prev, [designId]: 'failed' }));
