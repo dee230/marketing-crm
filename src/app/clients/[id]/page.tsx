@@ -160,7 +160,13 @@ export default async function CompanyDetailPage({ params }: PageProps) {
     }
     
     for (const task of tasks) {
-      allTasks.push({ ...task, personName: person.name });
+      allTasks.push({
+        id: task.id,
+        title: task.title,
+        dueDate: task.due_date || null,
+        status: task.status,
+        personName: person.name,
+      });
     }
   }
 
