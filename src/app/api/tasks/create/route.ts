@@ -53,8 +53,10 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
 
     // Use raw SQL for insert with proper timestamp handling
+    const userId = (session.user as any)?.id || null;
+
     await sqlRaw`
-      INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at)
+      INSERT INTO tasks (id, title, description, assignee_id, client_id, status, priority, due_date, created_at, updated_at, created_by, updated_by)
       VALUES (
         ${taskId},
         ${title},
@@ -65,7 +67,9 @@ export async function POST(request: Request) {
         ${priority},
         ${dueDate ? new Date(dueDate).toISOString() : null},
         ${now},
-        ${now}
+        ${now},
+        ${userId},
+        ${userId}
       )
     `;
 

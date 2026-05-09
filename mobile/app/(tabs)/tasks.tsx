@@ -109,6 +109,16 @@ export default function TasksScreen() {
             {item.description && (
               <Text style={styles.taskDesc} numberOfLines={2}>{item.description}</Text>
             )}
+            {(item.created_by_name || item.updated_by_name) && (
+              <View style={styles.taskMeta}>
+                {item.created_by_name && (
+                  <Text style={styles.metaText}>Created by {item.created_by_name}</Text>
+                )}
+                {item.updated_by_name && item.updated_by_name !== item.created_by_name && (
+                  <Text style={styles.metaText}> · Updated by {item.updated_by_name}</Text>
+                )}
+              </View>
+            )}
             <View style={styles.taskFooter}>
               <TouchableOpacity
                 onPress={() => handleStatusChange(item)}
@@ -230,6 +240,15 @@ const styles = StyleSheet.create({
     color: colors.gray,
     marginTop: 6,
     lineHeight: 18,
+  },
+  taskMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  metaText: {
+    fontSize: 11,
+    color: colors.gray,
   },
   taskFooter: {
     flexDirection: 'row',

@@ -158,7 +158,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       UPDATE tasks SET 
         status = ${newStatus},
         completed_at = ${newStatus === 'completed' ? now : null},
-        updated_at = ${now}
+        updated_at = ${now},
+        updated_by = ${userId}
       WHERE id = ${id}
     `;
     
@@ -174,7 +175,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       },
     });
   } else {
-    await sqlRaw`UPDATE tasks SET updated_at = ${now} WHERE id = ${id}`;
+    await sqlRaw`UPDATE tasks SET updated_at = ${now}, updated_by = ${userId} WHERE id = ${id}`;
   }
   
   return NextResponse.json({ success: true });
