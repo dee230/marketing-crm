@@ -1,5 +1,5 @@
 // Nandi Creative CRM — API client
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Paths, File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 // Change this to your deployed API URL
@@ -7,34 +7,39 @@ import { Platform } from 'react-native';
 // For production, use your production URL
 const API_BASE = 'https://marketing-crm-ebon.vercel.app';
 
-const SESSION_KEY = 'crm_session_token';
+const SESSION_FILE = new File(Paths.document, 'session.json');
 
-export async function getStoredSession(): Promise<{ email: string; password: string } | null> {
+export async function getStoredSession(): Promise<string | null> {
   try {
-    const data = await AsyncStorage.getItem(SESSION_KEY);
-    return data ? JSON.parse(data) : null;
+    if (!SESSION_FILE.exists) return null;
+    const data = await SESSION_FILE.text();
+    if (!data) return null;
+    const parsed = JSON.parse(data);
+    return parsed.cookieValue || null;
   } catch {
     return null;
   }
 }
 
-export async function storeSession(email: string, password: string) {
-  await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ email, password }));
+export async function storeSession(cookieValue: string) {
+  SESSION_FILE.write(JSON.stringify({ cookieValue }));
 }
 
 export async function clearSession() {
-  await AsyncStorage.removeItem(SESSION_KEY);
+  try {
+    if (SESSION_FILE.exists) SESSION_FILE.delete();
+  } catch {
+    // ignore
+  }
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const session = await getStoredSession();
+  const cookieValue = await getStoredSession();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (session) {
-    // We handle auth by setting the session cookie manually
-    // Fetch API on RN doesn't send cookies by default, so we login each time
-    // or you can store the session cookie value
+  if (cookieValue) {
+    headers['Cookie'] = `crm-session=${cookieValue}`;
   }
   return headers;
 }
@@ -56,7 +61,16 @@ export async function loginUser(email: string, password: string) {
   });
   const data = await res.json();
   if (data.success) {
-    await storeSession(email, password);
+    // Capture the crm-session cookie from the response's set-cookie header.
+    // React Native's fetch does NOT auto-send cookies, so we must manually
+    // store the cookie value and send it with every subsequent request.
+    const setCookie = res.headers.get('set-cookie');
+    if (setCookie) {
+      const match = setCookie.match(/crm-session=([^;]+)/);
+      if (match) {
+        await storeSession(match[1]);
+      }
+    }
     return data.user;
   }
   throw new Error(data.error || 'Login failed');
@@ -64,8 +78,8 @@ export async function loginUser(email: string, password: string) {
 
 // Fetch dashboard stats
 export async function fetchDashboardStats() {
-  const session = await getStoredSession();
-  if (!session) throw new Error('Not logged in');
+  const cookieValue = await getStoredSession();
+  if (!cookieValue) throw new Error('Not logged in');
 
   // Get clients count and data
   const clientsRes = await apiFetch('/api/clients');
