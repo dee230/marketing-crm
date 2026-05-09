@@ -24,17 +24,36 @@ export async function GET() {
 }
 
 export async function POST() {
-  console.log('=== DEBUG: Testing raw SQL for tasks ===');
+  console.log('=== DEBUG: Adding created_by and updated_by columns ===');
   
   try {
-    // Use raw SQL for select
-    const tasks = await sqlRaw`SELECT * FROM tasks LIMIT 5`;
-    console.log('Tasks found:', tasks.length);
+    // Add created_by column
+    try {
+      await sqlRaw`ALTER TABLE tasks ADD COLUMN created_by TEXT REFERENCES users(id) ON DELETE SET NULL`;
+      console.log('Added created_by column');
+    } catch (e: any) {
+      if (e.message?.includes('already exists')) {
+        console.log('created_by already exists');
+      } else {
+        throw e;
+      }
+    }
+    
+    // Add updated_by column  
+    try {
+      await sqlRaw`ALTER TABLE tasks ADD COLUMN updated_by TEXT REFERENCES users(id) ON DELETE SET NULL`;
+      console.log('Added updated_by column');
+    } catch (e: any) {
+      if (e.message?.includes('already exists')) {
+        console.log('updated_by already exists');
+      } else {
+        throw e;
+      }
+    }
     
     return NextResponse.json({
       success: true,
-      message: 'Raw SQL tasks query completed',
-      tasksCount: tasks.length,
+      message: 'Migration completed - created_by and updated_by columns added',
     });
   } catch (error: any) {
     console.error('=== ERROR ===');
