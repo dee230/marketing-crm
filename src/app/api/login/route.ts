@@ -37,6 +37,9 @@ export async function POST(request: Request) {
       exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
     };
 
+// Build the session token first (must be computed before use in the JSON response)
+    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+
     const response = NextResponse.json({ 
       success: true,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -44,7 +47,6 @@ export async function POST(request: Request) {
     });
 
 // Set our custom session cookie
-    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
     response.cookies.set('crm-session', sessionToken, {
       httpOnly: true,
       secure: true, // Always use secure - Vercel always provides HTTPS
