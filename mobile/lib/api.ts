@@ -61,14 +61,19 @@ export async function loginUser(email: string, password: string) {
   });
   const data = await res.json();
   if (data.success) {
-    // Capture the crm-session cookie from the response's set-cookie header.
-    // React Native's fetch does NOT auto-send cookies, so we must manually
-    // store the cookie value and send it with every subsequent request.
-    const setCookie = res.headers.get('set-cookie');
-    if (setCookie) {
-      const match = setCookie.match(/crm-session=([^;]+)/);
-      if (match) {
-        await storeSession(match[1]);
+    // Capture the session token from the JSON response body (preferred).
+    // React Native's Hermes fetch may not expose set-cookie headers to JS,
+    // so the server also returns sessionToken in the response body.
+    if (data.sessionToken) {
+      await storeSession(data.sessionToken);
+    } else {
+      // Fallback: try to extract from set-cookie header
+      const setCookie = res.headers.get('set-cookie');
+      if (setCookie) {
+        const match = setCookie.match(/crm-session=([^;]+)/);
+        if (match) {
+          await storeSession(match[1]);
+        }
       }
     }
     return data.user;

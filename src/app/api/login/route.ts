@@ -39,7 +39,8 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ 
       success: true,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role }
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      sessionToken // For mobile clients that can't read set-cookie headers
     });
 
 // Set our custom session cookie
