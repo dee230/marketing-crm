@@ -146,3 +146,36 @@ export async function fetchClientTasks(clientId: string) {
   const allTasks = await fetchTasks();
   return allTasks.filter((t: any) => t.clientId === clientId || t.client_id === clientId);
 }
+
+// Create a new task
+export async function createTask(params: {
+  title: string;
+  description?: string;
+  clientId?: string;
+  priority?: string;
+  status?: string;
+  dueDate?: string;
+}) {
+  const res = await apiFetch('/api/tasks/create', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to create task' }));
+    throw new Error(err.error || 'Failed to create task');
+  }
+  return res.json();
+}
+
+// Update task status (cycles: pending → in-progress → completed)
+export async function updateTaskStatus(taskId: string, newStatus: string) {
+  const res = await apiFetch(`/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: newStatus }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update task' }));
+    throw new Error(err.error || 'Failed to update task');
+  }
+  return res.json();
+}

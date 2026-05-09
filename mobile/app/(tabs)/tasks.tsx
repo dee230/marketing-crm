@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { fetchTasks } from '../../lib/api';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { fetchTasks, updateTaskStatus } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
 export default function TasksScreen() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -19,6 +20,20 @@ export default function TasksScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleStatusChange = async (task: any) => {
+    const nextStatus =
+      task.status === 'pending' ? 'in-progress' :
+      task.status === 'in-progress' ? 'completed' :
+      'pending';
+    try {
+      await updateTaskStatus(task.id, nextStatus);
+      // Optimistically update local state
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update task status');
     }
   };
 
@@ -56,19 +71,24 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Filter tabs */}
-      <View style={styles.filters}>
-        {(['all', 'pending', 'in-progress', 'completed'] as const).map(f => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, filter === f && styles.filterActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'in-progress' ? 'In Progress' : f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* Header row with filters + New Task */}
+      <View style={styles.filterRow}>
+        <View style={styles.filters}>
+          {(['all', 'pending', 'in-progress', 'completed'] as const).map(f => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterBtn, filter === f && styles.filterActive]}
+              onPress={() => setFilter(f)}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f === 'in-progress' ? 'In Progress' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/task/new')}>
+          <Text style={styles.addBtnText}>+ New</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -90,11 +110,14 @@ export default function TasksScreen() {
               <Text style={styles.taskDesc} numberOfLines={2}>{item.description}</Text>
             )}
             <View style={styles.taskFooter}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+              <TouchableOpacity
+                onPress={() => handleStatusChange(item)}
+                style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}
+              >
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                  {item.status || 'pending'}
+                  {item.status || 'pending'} ▶
                 </Text>
-              </View>
+              </TouchableOpacity>
               {item.due_date && (
                 <Text style={styles.dueDate}>
                   Due: {new Date(item.due_date).toLocaleDateString()}
@@ -122,11 +145,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 16,
+  },
   filters: {
+    flex: 1,
     flexDirection: 'row',
     padding: 16,
     paddingBottom: 8,
     gap: 8,
+  },
+  addBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  addBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
   },
   filterBtn: {
     paddingHorizontal: 16,

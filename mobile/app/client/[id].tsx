@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Linking, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { fetchClientDetail, fetchClientInvoices, fetchClientTasks } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
@@ -30,7 +30,11 @@ export default function ClientDetailScreen() {
     }
   };
 
-  useCallback(() => { loadData(); }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [id])
+  );
 
   if (loading) {
     return (
