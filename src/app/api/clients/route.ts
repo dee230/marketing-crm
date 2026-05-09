@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/session';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/auth';
-import { db } from '@/db';
+import { db, sqlRaw } from '@/db';
 import { clients } from '@/db/schema';
 import { nanoid } from 'nanoid';
 import { logAudit } from '@/lib/audit-log';
+
+export async function GET() {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allClients = await sqlRaw`SELECT * FROM clients ORDER BY created_at DESC`;
+    return NextResponse.json({ clients: allClients });
+  } catch (error: any) {
+    console.error('GET clients error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authConfig);
