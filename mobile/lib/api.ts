@@ -1,6 +1,9 @@
 // Nandi Creative CRM — API client
+// With offline cache: reads fall back to cache, writes queue when offline
 import { Paths, File } from 'expo-file-system';
 import { Platform } from 'react-native';
+import { getCached, setCached } from './cache';
+import { isOnline, addPendingOp } from './offline-state';
 
 // Change this to your deployed API URL
 // For testing with Vercel preview, use your preview URL
@@ -44,14 +47,80 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-// Simple fetch wrapper
-async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+// ── Fetch wrapper ──
+
+/** Low-level fetch helper. Exported so offline replay can reuse it. */
+export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const headers = await getAuthHeaders();
   return fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { ...headers, ...(options.headers || {}) },
   });
 }
+
+// ── Cache & queue helpers ──
+
+/**
+ * Fetch + cache pattern for read endpoints.
+ * Tries network first. On failure, falls back to cached data.
+ * Cache key is derived from `key` param (not the full URL, for cleanliness).
+ */
+async function fetchWithCache<T>(
+  path: string,
+  cacheKey: string,
+  extractor: (json: any) => T,
+  ttl?: number
+): Promise<T> {
+  try {
+    const res = await apiFetch(path);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const data = extractor(json);
+    // Update cache in background (don't block on write)
+    setCached(cacheKey, data, ttl).catch(() => {});
+    return data;
+  } catch (err) {
+    // Network or server error — try cache
+    const cached = await getCached<T>(cacheKey);
+    if (cached) return cached.data;
+    throw err; // No cache available, re-throw
+  }
+}
+
+/**
+ * Write + queue pattern for mutation endpoints.
+ * Tries network. On failure while offline, queues the operation for later replay.
+ */
+async function writeWithQueue(
+  doFetch: () => Promise<Response>,
+  opType: PendingOpType,
+  opParams: Record<string, unknown>
+): Promise<any> {
+  try {
+    const res = await doFetch();
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(errBody.error || 'Request failed');
+    }
+    return res.json();
+  } catch (err) {
+    // If we're offline (or health check hasn't caught up), queue
+    if (!isOnline()) {
+      await addPendingOp({ type: opType, params: opParams });
+      return { _queued: true };
+    }
+    throw err;
+  }
+}
+
+type PendingOpType =
+  | 'createTask'
+  | 'updateTaskStatus'
+  | 'markInvoiceAsPaid'
+  | 'updateClient'
+  | 'updateLeadStatus';
+
+// ── Auth ──
 
 // Login — returns session user if successful
 export async function loginUser(email: string, password: string) {
@@ -81,64 +150,68 @@ export async function loginUser(email: string, password: string) {
   throw new Error(data.error || 'Login failed');
 }
 
-// Fetch dashboard stats
+// ── Dashboard ──
+
+// Fetch dashboard stats (delegates to cached fetchClients/fetchTasks)
 export async function fetchDashboardStats() {
-  const cookieValue = await getStoredSession();
-  if (!cookieValue) throw new Error('Not logged in');
-
-  // Get clients count and data
-  const clientsRes = await apiFetch('/api/clients');
-  if (!clientsRes.ok) throw new Error('Failed to fetch clients');
-  const clientsData = await clientsRes.json();
-  
-  // Get tasks
-  const tasksRes = await apiFetch('/api/tasks');
-  if (!tasksRes.ok) throw new Error('Failed to fetch tasks');
-  const tasksData = await tasksRes.json();
-
-  return {
-    clients: clientsData.clients || clientsData || [],
-    tasks: tasksData.tasks || tasksData || [],
-  };
+  const [clients, tasks] = await Promise.all([fetchClients(), fetchTasks()]);
+  return { clients, tasks };
 }
+
+// ── Clients ──
 
 // Fetch clients
 export async function fetchClients(query?: string) {
   const path = query ? `/api/clients?query=${encodeURIComponent(query)}` : '/api/clients';
-  const res = await apiFetch(path);
-  if (!res.ok) throw new Error('Failed to fetch clients');
-  const data = await res.json();
-  return data.clients || data || [];
+  const cacheKey = query ? `clients_query_${query}` : 'clients';
+  return fetchWithCache<any[]>(
+    path,
+    cacheKey,
+    (json) => json.clients || json || [],
+    5 * 60 * 1000 // 5 min TTL for list
+  );
 }
 
 // Fetch single client detail
 export async function fetchClientDetail(clientId: string) {
-  const res = await apiFetch(`/api/clients/${clientId}`);
-  if (!res.ok) throw new Error('Failed to fetch client');
-  const data = await res.json();
-  return data.client || data || null;
+  return fetchWithCache<any>(
+    `/api/clients/${clientId}`,
+    `client_${clientId}`,
+    (json) => json.client || json || null,
+    2 * 60 * 1000 // 2 min TTL for detail
+  );
 }
+
+// ── Invoices ──
 
 // Fetch invoices
 export async function fetchInvoices() {
-  const res = await apiFetch('/api/invoices');
-  if (!res.ok) throw new Error('Failed to fetch invoices');
-  const data = await res.json();
-  return data.invoices || data || [];
-}
-
-// Fetch tasks
-export async function fetchTasks() {
-  const res = await apiFetch('/api/tasks');
-  if (!res.ok) throw new Error('Failed to fetch tasks');
-  const data = await res.json();
-  return data.tasks || data || [];
+  return fetchWithCache<any[]>(
+    '/api/invoices',
+    'invoices',
+    (json) => json.invoices || json || [],
+    5 * 60 * 1000
+  );
 }
 
 // Fetch invoices for a specific client
 export async function fetchClientInvoices(clientId: string) {
   const allInvoices = await fetchInvoices();
-  return allInvoices.filter((inv: any) => inv.clientId === clientId || inv.client_id === clientId);
+  return allInvoices.filter(
+    (inv: any) => inv.clientId === clientId || inv.client_id === clientId
+  );
+}
+
+// ── Tasks ──
+
+// Fetch tasks
+export async function fetchTasks() {
+  return fetchWithCache<any[]>(
+    '/api/tasks',
+    'tasks',
+    (json) => json.tasks || json || [],
+    5 * 60 * 1000
+  );
 }
 
 // Fetch tasks for a specific client
@@ -156,87 +229,92 @@ export async function createTask(params: {
   status?: string;
   dueDate?: string;
 }) {
-  const res = await apiFetch('/api/tasks/create', {
-    method: 'POST',
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to create task' }));
-    throw new Error(err.error || 'Failed to create task');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch('/api/tasks/create', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    'createTask',
+    params as unknown as Record<string, unknown>
+  );
 }
 
 // Update task status (cycles: pending → in-progress → completed)
 export async function updateTaskStatus(taskId: string, newStatus: string) {
-  const res = await apiFetch(`/api/tasks/${taskId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: newStatus }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to update task' }));
-    throw new Error(err.error || 'Failed to update task');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      }),
+    'updateTaskStatus',
+    { taskId, newStatus }
+  );
 }
 
 // ── Leads ──
 
 export async function fetchLeads() {
-  const res = await apiFetch('/api/leads');
-  if (!res.ok) throw new Error('Failed to fetch leads');
-  const data = await res.json();
-  return data.leads || data || [];
+  return fetchWithCache<any[]>(
+    '/api/leads',
+    'leads',
+    (json) => json.leads || json || [],
+    5 * 60 * 1000
+  );
 }
 
 export async function updateLeadStatus(leadId: string, newStatus: string) {
-  const res = await apiFetch(`/api/leads/${leadId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: newStatus }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to update lead' }));
-    throw new Error(err.error || 'Failed to update lead');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      }),
+    'updateLeadStatus',
+    { leadId, newStatus }
+  );
 }
 
 export async function updateLead(leadId: string, data: Record<string, any>) {
-  const res = await apiFetch(`/api/leads/${leadId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to update lead' }));
-    throw new Error(err.error || 'Failed to update lead');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    'updateLeadStatus',
+    { leadId, ...data }
+  );
 }
 
 // ── Client updates ──
 
 export async function updateClient(clientId: string, data: Record<string, any>) {
-  const res = await apiFetch(`/api/clients/${clientId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to update client' }));
-    throw new Error(err.error || 'Failed to update client');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    'updateClient',
+    { clientId, ...data }
+  );
 }
 
 // ── Invoice actions ──
 
 export async function markInvoiceAsPaid(invoiceId: string, paymentReference?: string) {
-  const res = await apiFetch(`/api/invoices/${invoiceId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: 'paid', paymentReference: paymentReference || null }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to update invoice' }));
-    throw new Error(err.error || 'Failed to update invoice');
-  }
-  return res.json();
+  return writeWithQueue(
+    () =>
+      apiFetch(`/api/invoices/${invoiceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'paid',
+          paymentReference: paymentReference || null,
+        }),
+      }),
+    'markInvoiceAsPaid',
+    { invoiceId, paymentReference: paymentReference || null }
+  );
 }
