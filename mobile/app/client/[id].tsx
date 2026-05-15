@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Linking, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect, useRouter } from 'expo-router';
 import { fetchClientDetail, fetchClientInvoices, fetchClientTasks } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [client, setClient] = useState<any>(null);
@@ -71,6 +72,9 @@ export default function ClientDetailScreen() {
             {client.status}
           </Text>
         </View>
+        <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`/client/${id}/edit`)}>
+          <Text style={styles.editBtnText}>Edit</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Contact Info */}
@@ -228,6 +232,19 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
+    fontWeight: '500',
+  },
+  editBtn: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  editBtnText: {
+    color: colors.primary,
+    fontSize: 14,
     fontWeight: '500',
   },
   section: {

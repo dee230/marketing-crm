@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchTasks, updateTaskStatus } from '../../lib/api';
@@ -43,7 +43,19 @@ export default function TasksScreen() {
     }, [])
   );
 
-  const filtered = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
+  const filtered = useMemo(() => {
+    let result = filter === 'all' ? [...tasks] : tasks.filter(t => t.status === filter);
+    // Sort: uncompleted first, then by due_date ascending (soonest first)
+    result.sort((a, b) => {
+      const aDone = a.status === 'completed';
+      const bDone = b.status === 'completed';
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      const aDate = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+      const bDate = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      return aDate - bDate;
+    });
+    return result;
+  }, [tasks, filter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -51,6 +63,11 @@ export default function TasksScreen() {
       case 'in-progress': return colors.teal;
       default: return colors.gray;
     }
+  };
+
+  const isOverdue = (task: any) => {
+    if (task.status === 'completed' || !task.due_date) return false;
+    return new Date(task.due_date) < new Date();
   };
 
   const getPriorityColor = (priority: string) => {
@@ -109,13 +126,23 @@ export default function TasksScreen() {
             {item.description && (
               <Text style={styles.taskDesc} numberOfLines={2}>{item.description}</Text>
             )}
-            {(item.created_by_name || item.updated_by_name) && (
+            {(item.client_name || item.assignee_name) && (
               <View style={styles.taskMeta}>
+                {item.client_name && <Text style={styles.metaText}>{item.client_name}</Text>}
+                {item.assignee_name && (
+                  <Text style={styles.metaText}>
+                    {item.client_name ? ' · ' : ''}{item.assignee_name}
+                  </Text>
+                )}
+              </View>
+            )}
+            {(item.created_by_name || item.updated_by_name) && (
+              <View style={[styles.taskMeta, { marginTop: 2 }]}>
                 {item.created_by_name && (
-                  <Text style={styles.metaText}>Created by {item.created_by_name}</Text>
+                  <Text style={styles.metaMini}>Created by {item.created_by_name}</Text>
                 )}
                 {item.updated_by_name && item.updated_by_name !== item.created_by_name && (
-                  <Text style={styles.metaText}> · Updated by {item.updated_by_name}</Text>
+                  <Text style={styles.metaMini}> · Updated by {item.updated_by_name}</Text>
                 )}
               </View>
             )}
@@ -129,8 +156,8 @@ export default function TasksScreen() {
                 </Text>
               </TouchableOpacity>
               {item.due_date && (
-                <Text style={styles.dueDate}>
-                  Due: {new Date(item.due_date).toLocaleDateString()}
+                <Text style={[styles.dueDate, isOverdue(item) && styles.dueDateOverdue]}>
+                  {isOverdue(item) ? '⚠ ' : ''}Due: {new Date(item.due_date).toLocaleDateString()}
                 </Text>
               )}
             </View>
@@ -247,6 +274,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   metaText: {
+    fontSize: 12,
+    color: colors.dark,
+    fontWeight: '500',
+  },
+  metaMini: {
     fontSize: 11,
     color: colors.gray,
   },
@@ -268,6 +300,10 @@ const styles = StyleSheet.create({
   dueDate: {
     fontSize: 12,
     color: colors.gray,
+  },
+  dueDateOverdue: {
+    color: colors.red,
+    fontWeight: '600',
   },
   empty: {
     padding: 40,

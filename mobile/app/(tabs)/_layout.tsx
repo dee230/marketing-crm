@@ -6,8 +6,10 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
     dashboard: '📊',
     clients: '👥',
+    leads: '⭐',
     tasks: '✓',
     invoices: '📄',
+    settings: '⚙',
   };
   return (
     <View style={[styles.iconContainer, focused && styles.iconFocused]}>
@@ -62,11 +64,27 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="leads"
+        options={{
+          title: 'Leads',
+          tabBarLabel: 'Leads',
+          tabBarIcon: ({ focused }) => <TabIcon name="leads" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="invoices"
         options={{
           title: 'Invoices',
           tabBarLabel: 'Invoices',
           tabBarIcon: ({ focused }) => <TabIcon name="invoices" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarLabel: 'Settings',
+          tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
         }}
       />
     </Tabs>

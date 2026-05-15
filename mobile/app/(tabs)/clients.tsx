@@ -4,6 +4,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { fetchClients } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
+const STATUS_FILTERS = ['all', 'active', 'prospect', 'lead'] as const;
+
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
@@ -14,6 +16,7 @@ export default function ClientsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const loadClients = async () => {
     try {
@@ -33,14 +36,15 @@ export default function ClientsScreen() {
     }, [])
   );
 
-  const filtered = search.trim()
-    ? clients.filter(c => {
-        const q = search.toLowerCase();
-        return (c.name || '').toLowerCase().includes(q) ||
-               (c.company || '').toLowerCase().includes(q) ||
-               (c.email || '').toLowerCase().includes(q);
-      })
-    : clients;
+  const filtered = clients
+    .filter(c => statusFilter === 'all' || c.status === statusFilter)
+    .filter(c => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (c.name || '').toLowerCase().includes(q) ||
+             (c.company || '').toLowerCase().includes(q) ||
+             (c.email || '').toLowerCase().includes(q);
+    });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -97,6 +101,21 @@ export default function ClientsScreen() {
         />
       </View>
 
+      {/* Status filters */}
+      <View style={styles.filters}>
+        {STATUS_FILTERS.map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterBtn, statusFilter === f && styles.filterActive]}
+            onPress={() => setStatusFilter(f)}
+          >
+            <Text style={[styles.filterText, statusFilter === f && styles.filterTextActive]}>
+              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <FlatList
         data={filtered}
         renderItem={renderClient}
@@ -136,6 +155,32 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     color: colors.dark,
+  },
+  filters: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  filterBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+  },
+  filterActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterText: {
+    fontSize: 13,
+    color: colors.gray,
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: colors.white,
   },
   list: {
     padding: 16,

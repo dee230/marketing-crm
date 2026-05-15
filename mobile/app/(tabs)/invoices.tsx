@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { fetchInvoices } from '../../lib/api';
+import { fetchInvoices, markInvoiceAsPaid } from '../../lib/api';
 import { colors } from '../../lib/theme';
 
 export default function InvoicesScreen() {
@@ -9,6 +9,8 @@ export default function InvoicesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('unpaid');
+  const [payModal, setPayModal] = useState<{ visible: boolean; invoice: any }>({ visible: false, invoice: null });
+  const [paymentRef, setPaymentRef] = useState('');
 
   const loadInvoices = async () => {
     try {
@@ -33,6 +35,21 @@ export default function InvoicesScreen() {
     : invoices.filter(inv =>
         filter === 'paid' ? inv.status === 'paid' : inv.status !== 'paid'
       );
+
+  const handleMarkPaid = async () => {
+    if (!payModal.invoice) return;
+    try {
+      await markInvoiceAsPaid(payModal.invoice.id, paymentRef || undefined);
+      setInvoices(prev => prev.map(inv =>
+        inv.id === payModal.invoice.id ? { ...inv, status: 'paid', payment_reference: paymentRef || null } : inv
+      ));
+      setPayModal({ visible: false, invoice: null });
+      setPaymentRef('');
+      Alert.alert('Done', 'Invoice marked as paid');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update invoice');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -87,7 +104,16 @@ export default function InvoicesScreen() {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadInvoices} />}
         renderItem={({ item }) => (
-          <View style={styles.invoiceCard}>
+          <TouchableOpacity
+            style={styles.invoiceCard}
+            onPress={() => {
+              if (item.status !== 'paid') {
+                setPayModal({ visible: true, invoice: item });
+                setPaymentRef('');
+              }
+            }}
+            disabled={item.status === 'paid'}
+          >
             <View style={styles.invoiceHeader}>
               <Text style={styles.invoiceNumber}>{item.invoiceNumber || 'Draft'}</Text>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
@@ -105,7 +131,13 @@ export default function InvoicesScreen() {
                 Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}
               </Text>
             </View>
-          </View>
+            {item.client_name && (
+              <Text style={styles.clientName}>{item.client_name}</Text>
+            )}
+            {item.status !== 'paid' && (
+              <Text style={styles.tapHint}>Tap to mark as paid</Text>
+            )}
+          </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -115,41 +147,49 @@ export default function InvoicesScreen() {
           </View>
         }
       />
+
+      {/* Mark as Paid Modal */}
+      <Modal visible={payModal.visible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Mark as Paid</Text>
+            <Text style={styles.modalInvoice}>
+              {payModal.invoice?.invoiceNumber} — KES {payModal.invoice?.amount?.toLocaleString()}
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Payment reference (optional)"
+              value={paymentRef}
+              onChangeText={setPaymentRef}
+              placeholderTextColor={colors.gray}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setPayModal({ visible: false, invoice: null })}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmBtn} onPress={handleMarkPaid}>
+                <Text style={styles.confirmText}>Mark Paid</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  center: { justifyContent: 'center', alignItems: 'center' },
   summary: {
     backgroundColor: colors.primary,
     padding: 24,
     margin: 16,
     borderRadius: 16,
   },
-  summaryTitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  summaryAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginTop: 4,
-  },
-  filters: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
+  summaryTitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)' },
+  summaryAmount: { fontSize: 28, fontWeight: 'bold', color: colors.white, marginTop: 4 },
+  filters: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
   filterBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -158,22 +198,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.lightGray,
   },
-  filterActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterText: {
-    fontSize: 13,
-    color: colors.gray,
-    fontWeight: '500',
-  },
-  filterTextActive: {
-    color: colors.white,
-  },
-  list: {
-    padding: 16,
-    paddingTop: 8,
-  },
+  filterActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterText: { fontSize: 13, color: colors.gray, fontWeight: '500' },
+  filterTextActive: { color: colors.white },
+  list: { padding: 16, paddingTop: 8 },
   invoiceCard: {
     backgroundColor: colors.white,
     borderRadius: 12,
@@ -185,30 +213,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  invoiceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  invoiceNumber: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.dark,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  invoiceDesc: {
-    fontSize: 13,
-    color: colors.gray,
-    marginTop: 6,
-  },
+  invoiceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  invoiceNumber: { fontSize: 15, fontWeight: '600', color: colors.dark },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
+  statusText: { fontSize: 12, fontWeight: '500' },
+  invoiceDesc: { fontSize: 13, color: colors.gray, marginTop: 6 },
   invoiceFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -218,21 +227,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.lightGray,
   },
-  amount: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  amount: { fontSize: 16, fontWeight: 'bold', color: colors.dark },
+  dueDate: { fontSize: 12, color: colors.gray },
+  clientName: { fontSize: 12, color: colors.gray, marginTop: 4 },
+  tapHint: { fontSize: 11, color: colors.primary, marginTop: 4, fontWeight: '500' },
+  empty: { padding: 40, alignItems: 'center' },
+  emptyText: { color: colors.gray, fontSize: 14 },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 32 },
+  modalContent: { backgroundColor: colors.white, borderRadius: 16, padding: 24 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.dark, marginBottom: 8 },
+  modalInvoice: { fontSize: 14, color: colors.gray, marginBottom: 16 },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
     color: colors.dark,
+    marginBottom: 20,
   },
-  dueDate: {
-    fontSize: 12,
-    color: colors.gray,
-  },
-  empty: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: colors.gray,
-    fontSize: 14,
-  },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.lightGray, alignItems: 'center' },
+  cancelText: { color: colors.gray, fontSize: 15 },
+  confirmBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.green, alignItems: 'center' },
+  confirmText: { color: colors.white, fontSize: 15, fontWeight: '600' },
 });

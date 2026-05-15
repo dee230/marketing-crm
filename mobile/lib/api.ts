@@ -179,3 +179,64 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
   }
   return res.json();
 }
+
+// ── Leads ──
+
+export async function fetchLeads() {
+  const res = await apiFetch('/api/leads');
+  if (!res.ok) throw new Error('Failed to fetch leads');
+  const data = await res.json();
+  return data.leads || data || [];
+}
+
+export async function updateLeadStatus(leadId: string, newStatus: string) {
+  const res = await apiFetch(`/api/leads/${leadId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: newStatus }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update lead' }));
+    throw new Error(err.error || 'Failed to update lead');
+  }
+  return res.json();
+}
+
+export async function updateLead(leadId: string, data: Record<string, any>) {
+  const res = await apiFetch(`/api/leads/${leadId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update lead' }));
+    throw new Error(err.error || 'Failed to update lead');
+  }
+  return res.json();
+}
+
+// ── Client updates ──
+
+export async function updateClient(clientId: string, data: Record<string, any>) {
+  const res = await apiFetch(`/api/clients/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update client' }));
+    throw new Error(err.error || 'Failed to update client');
+  }
+  return res.json();
+}
+
+// ── Invoice actions ──
+
+export async function markInvoiceAsPaid(invoiceId: string, paymentReference?: string) {
+  const res = await apiFetch(`/api/invoices/${invoiceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'paid', paymentReference: paymentReference || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update invoice' }));
+    throw new Error(err.error || 'Failed to update invoice');
+  }
+  return res.json();
+}
