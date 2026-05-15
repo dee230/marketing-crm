@@ -1,7 +1,6 @@
 // Nandi Creative CRM — API client
 // With offline cache: reads fall back to cache, writes queue when offline
 import { Paths, File } from 'expo-file-system';
-import { Platform } from 'react-native';
 import { getCached, setCached } from './cache';
 import { isOnline, addPendingOp } from './offline-state';
 

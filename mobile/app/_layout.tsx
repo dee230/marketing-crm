@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -13,8 +13,6 @@ import {
 export default function RootLayout() {
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
-  const pendingRef = useRef(pendingCount);
-  pendingRef.current = pendingCount;
 
   useEffect(() => {
     startHealthCheck();
