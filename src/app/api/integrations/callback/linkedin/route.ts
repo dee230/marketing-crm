@@ -35,15 +35,15 @@ export async function GET(request: Request) {
     const expiresAt = new Date(Date.now() + (tokenData.expires_in || 5184000) * 1000).toISOString();
     const now = new Date().toISOString();
     
-    // Get user profile to get company info
-    const profileUrl = 'https://api.linkedin.com/v2/me';
+    // Get user profile via OpenID Connect (modern API)
+    const profileUrl = 'https://api.linkedin.com/v2/userinfo';
     const profileRes = await fetch(profileUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     });
     const profileData = await profileRes.json();
     
-    const companyId = profileData.id || null;
-    const companyName = profileData.localizedName || profileData.name || null;
+    const companyId = profileData.sub || null;
+    const companyName = profileData.name || profileData.given_name || null;
     
     // Upsert integration
     await sqlRaw`

@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     let authUrl = '';
     
     if (provider === 'linkedin') {
-      const scopes = 'r_liteprofile r_emailaddress w_member_social';
+      const scopes = 'openid profile email w_member_social';
       authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${userId}`;
     } else if (provider === 'facebook') {
       const scopes = 'pages_manage_posts,pages_read_engagement,public_profile';
