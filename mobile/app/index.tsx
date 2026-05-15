@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { loginUser } from '../lib/api';
+import { setupPushNotificationsAfterLogin } from '../lib/notifications';
 import { colors } from '../lib/theme';
 
 export default function LoginScreen() {
@@ -18,6 +19,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await loginUser(email, password);
+      // Register for push notifications (best-effort, don't block login)
+      setupPushNotificationsAfterLogin();
       router.replace('/(tabs)/dashboard');
     } catch (err: any) {
       Alert.alert('Login Failed', err.message || 'Invalid credentials');

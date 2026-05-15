@@ -317,3 +317,28 @@ export async function markInvoiceAsPaid(invoiceId: string, paymentReference?: st
     { invoiceId, paymentReference: paymentReference || null }
   );
 }
+
+// ── Push Notifications ──
+
+export async function registerPushToken(pushToken: string) {
+  const res = await apiFetch('/api/notifications/register', {
+    method: 'POST',
+    body: JSON.stringify({ pushToken }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to register push token' }));
+    throw new Error(err.error || 'Failed to register push token');
+  }
+  return res.json();
+}
+
+export async function unregisterPushToken() {
+  const res = await apiFetch('/api/notifications/register', {
+    method: 'POST',
+    body: JSON.stringify({ pushToken: null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to unregister push token' }));
+    console.error('Failed to unregister push token:', err.error);
+  }
+}

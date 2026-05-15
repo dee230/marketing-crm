@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sqlRaw } from '@/db';
+import { notifyTaskAssigned } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,12 @@ export async function POST(request: Request) {
         ${userId}
       )
     `;
+
+    // If task was assigned to someone other than the creator, send push notification
+    if (assigneeId && assigneeId !== userId) {
+      const creatorName = (session.user as any)?.name || 'Someone';
+      notifyTaskAssigned(taskId, title, assigneeId, creatorName).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

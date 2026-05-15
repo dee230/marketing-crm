@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sqlRaw } from '@/db';
 import { logAudit } from '@/lib/audit-log';
+import { notifyTaskStatusChanged } from '@/lib/notifications';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -74,6 +75,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           approved: true
         },
       });
+
+      // Notify the requester that their change was approved
+      const requesterId = currentTask.pending_status_requested_by;
+      if (requesterId && requesterId !== userId) {
+        const adminName = (session.user as any)?.name || 'An admin';
+        notifyTaskStatusChanged(
+          id, currentTask.title, currentTask.pending_status, adminName, requesterId
+        ).catch(() => {});
+      }
       
       return NextResponse.json({ success: true, message: 'Status change approved' });
     } else {
@@ -174,6 +184,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         newStatus: newStatus 
       },
     });
+
+    // Notify the assignee or creator about the status change (if they didn't make it)
+    const notifyTargetId =
+      (currentTask.assignee_id && currentTask.assignee_id !== userId)
+        ? currentTask.assignee_id
+        : (currentTask.created_by && currentTask.created_by !== userId)
+          ? currentTask.created_by
+          : null;
+
+    if (notifyTargetId) {
+      const changerName = (session.user as any)?.name || 'Someone';
+      notifyTaskStatusChanged(
+        id, currentTask.title, newStatus, changerName, notifyTargetId
+      ).catch(() => {});
+    }
   } else {
     await sqlRaw`UPDATE tasks SET updated_at = ${now}, updated_by = ${userId} WHERE id = ${id}`;
   }
